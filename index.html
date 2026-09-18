@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RUWT">
+<meta name="theme-color" content="#ffd700">
+<title>RUWT — Dan's live board</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23ffd700'/><text x='50' y='68' font-size='52' text-anchor='middle' font-family='Georgia' font-weight='bold'>R</text></svg>">
+<style>
+:root{
+  --gold:#ffd700; --ink:#111; --rule:#000; --muted:#666; --line:#e4e4e4; --soft:#f6f6f6;
+  --r80:#e53935; --r70:#f57c00; --r60:#f5c518; --r50:#388e3c; --r0:#1976d2;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#fff;color:#111;font-family:Georgia,"Times New Roman",serif;font-size:15px;line-height:1.35}
+button{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:3px solid #1976d2;outline-offset:2px}
+
+/* Banner */
+.banner{background:var(--gold);padding:10px 16px calc(10px) ;padding-top:max(10px,env(safe-area-inset-top));position:sticky;top:0;z-index:20;border-bottom:2px solid #000}
+.banner-in{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-size:26px;font-weight:bold;letter-spacing:.5px;margin:0}
+.brand small{font-size:14px;font-weight:normal;margin-left:8px}
+.pulse{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px}
+.pulse .dot{width:9px;height:9px;border-radius:50%;background:#555}
+.pulse.ok .dot{background:#2e7d32}
+.pulse.err .dot{background:#c62828}
+.iconbtn{border:1.5px solid #000;background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
+.iconbtn:active{transform:translateY(1px)}
+
+/* Last-night strip */
+.lastnight{background:#fff6b3;border-bottom:1px solid #d9c200}
+.lastnight-in{max-width:1280px;margin:0 auto;padding:8px 16px;display:flex;gap:18px;overflow-x:auto;white-space:nowrap;font-size:14px;scrollbar-width:none}
+.lastnight-in::-webkit-scrollbar{display:none}
+.lastnight b{margin-right:6px}
+
+main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
+
+/* Filter chips */
+.filters{display:grid;gap:6px;margin:4px 0 12px}
+.frow{display:flex;gap:6px;align-items:center;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.frow::-webkit-scrollbar{display:none}
+.flabel{font-size:12px;color:var(--muted);min-width:48px;flex:none}
+.chip{flex:none;border:1.5px solid #000;background:#fff;border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
+.chip[aria-pressed="true"]{background:#000;color:#fff}
+.chip .n{opacity:.6;margin-left:4px;font-size:11px}
+
+/* Section heads */
+.shead{text-transform:uppercase;font-size:14px;font-weight:bold;letter-spacing:1px;border-bottom:2px solid var(--rule);padding:14px 0 4px;margin:6px 0 0;display:flex;align-items:center;gap:8px}
+.shead .count{font-weight:normal;color:var(--muted);letter-spacing:0}
+.livedot{width:10px;height:10px;border-radius:50%;background:#e53935;display:inline-block;animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+
+/* Game rows — desktop grid */
+.game{display:grid;align-items:center;column-gap:10px;
+  grid-template-columns:6px 46px 40px 86px minmax(150px,1.3fr) 64px minmax(150px,1.3fr) 108px minmax(90px,1fr) 118px;
+  grid-template-areas:"strip sport rate time away score home chan venue odds";
+  border-bottom:1px solid var(--line);padding:7px 0;min-height:52px}
+.game:hover{background:#fafafa}
+.strip{grid-area:strip;align-self:stretch;border-radius:3px}
+.sbadge{grid-area:sport;font-size:10px;font-weight:bold;color:#fff;text-align:center;border-radius:4px;padding:3px 0;letter-spacing:.5px}
+.sbadge.dark{color:#111}
+.rbox{grid-area:rate;width:38px;height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#fff;font-size:15px;cursor:help}
+.rbox.r80{background:var(--r80)}.rbox.r70{background:var(--r70)}.rbox.r60{background:var(--r60);color:#111}.rbox.r50{background:var(--r50)}.rbox.r0{background:var(--r0)}
+.time{grid-area:time;font-size:13px}
+.time .st{display:block;font-weight:bold}
+.time .st.live{color:#c62828}
+.team{display:flex;align-items:center;gap:7px;min-width:0}
+.team.away{grid-area:away}
+.team.home{grid-area:home}
+.team .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team .rk{font-size:11px;color:var(--muted);margin-right:2px}
+.team .rec{font-size:11px;color:var(--muted);margin-left:4px}
+.team.win .nm{font-weight:bold}
+.logo{width:28px;height:28px;object-fit:contain;flex:none}
+.tchip{flex:none;min-width:34px;height:24px;border-radius:5px;color:#fff;font:bold 11px/20px Georgia,serif;text-align:center;padding:0 4px;border-bottom:3px solid transparent}
+.flag{width:22px;height:15px;object-fit:cover;border:1px solid #ccc;flex:none}
+.score{grid-area:score;text-align:center;font-weight:bold;font-size:17px;white-space:nowrap}
+.score .vs{font-weight:normal;color:var(--muted);font-size:13px}
+.score.bump{animation:bump 1.6s ease-out}
+@keyframes bump{0%{background:#ffe66b}100%{background:transparent}}
+.mscore{display:none}
+.chan{grid-area:chan;text-align:center;line-height:1.15}
+.pill{display:inline-block;border-radius:4px;padding:2px 7px;font-size:12px;font-weight:bold;color:#fff;white-space:nowrap}
+.chan .sub{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.chan .alt{display:block;font-size:10px;color:var(--muted)}
+.chan.bad .pill{background:#fff!important;color:#c62828;border:1.5px dashed #c62828}
+.venue{grid-area:venue;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.odds{grid-area:odds;font-size:12px;line-height:1.35;text-align:right;white-space:nowrap}
+.odds .lbl{color:var(--muted)}
+.odds .tag{font-size:9px;border:1px solid #999;border-radius:3px;padding:0 3px;margin-left:3px;color:#555}
+.event .evname{grid-column:away / home;font-weight:bold;min-width:0}
+.event .evname .lead{display:block;font-weight:normal;font-size:13px;color:#333}
+.fav{margin-left:3px}
+
+.empty{padding:28px 0;color:var(--muted);text-align:center}
+.notice{border:1.5px solid #c62828;border-radius:8px;padding:12px 14px;margin:12px 0;font-size:14px;background:#fff5f5}
+.skeleton{height:52px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#fafafa,#f0f0f0,#fafafa);background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+
+/* On deck footer */
+.ondeck{position:fixed;left:0;right:0;bottom:0;background:#e6e6e6;border-top:2px solid #000;z-index:15;padding-bottom:env(safe-area-inset-bottom)}
+.ondeck-in{max-width:1280px;margin:0 auto;padding:8px 16px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Settings */
+dialog{border:2px solid #000;border-radius:10px;max-width:520px;width:calc(100% - 24px);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog h2{margin:0 0 10px;font-size:20px}
+dialog label{display:block;font-size:13px;margin:12px 0 4px}
+dialog input[type=text]{width:100%;padding:8px;border:1.5px solid #000;border-radius:6px;font:inherit}
+dialog .hint{font-size:12px;color:var(--muted);margin-top:4px}
+dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;font-size:12px}
+.legend span{padding:2px 8px;border-radius:4px;color:#fff}
+
+/* Mobile cards */
+@media (max-width:720px){
+  body{font-size:15px}
+  .brand{font-size:22px}
+  main{padding:10px 10px 90px}
+  .game{grid-template-columns:40px 1fr auto;
+    grid-template-areas:
+      "rate sport chan"
+      "rate time  chan"
+      "away away  away"
+      "home home  home"
+      "odds odds  odds"
+      "venue venue venue";
+    row-gap:3px;border:1px solid var(--line);border-left:6px solid var(--sc,#999);border-radius:8px;padding:9px 10px;margin:8px 0}
+  .strip{display:none}
+  .sbadge{justify-self:start;padding:2px 7px}
+  .time{display:flex;gap:8px;align-items:baseline}
+  .time .st{display:inline}
+  .score{display:none}
+  .mscore{display:block;margin-left:auto;font-weight:bold;font-size:18px;padding-left:8px}
+  .team{padding:2px 0}
+  .team .nm{font-size:16px}
+  .chan{text-align:right;align-self:start}
+  .odds{text-align:left;white-space:normal}
+  .odds br{display:none}
+  .odds > span{margin-right:10px}
+  .event .evname{grid-area:away}
+  .event .team.home{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .livedot,.score.bump,.skeleton{animation:none}
+}
+</style>
+</head>
+<body>
+<header class="banner">
+  <div class="banner-in">
+    <h1 class="brand">RUWT <small id="today"></small></h1>
+    <div class="pulse" id="pulse" role="status" aria-live="polite"><span class="dot"></span><span id="pulseText">Loading…</span></div>
+    <button class="iconbtn" id="refreshBtn" type="button">Refresh</button>
+    <button class="iconbtn" id="settingsBtn" type="button">Settings</button>
+  </div>
+</header>
+<div class="lastnight" id="lastnight" hidden><div class="lastnight-in" id="lastnightIn"></div></div>
+
+<main>
+  <div class="filters" id="filters"></div>
+  <div id="notice"></div>
+  <div id="sections"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+</main>
+
+<footer class="ondeck"><div class="ondeck-in" id="ondeck">On deck: loading…</div></footer>
+
+<dialog id="settings">
+  <h2>Settings</h2>
+  <label for="oddsKey">Live odds key (optional)</label>
+  <input type="text" id="oddsKey" placeholder="The Odds API key" autocomplete="off">
+  <div class="hint">ESPN's free feed gives pregame lines only. A key from the-odds-api.com adds in-game moneylines and totals, refreshed every 10 minutes while games are live.</div>
+  <label for="blackout">MLB.TV blackout teams (comma-separated)</label>
+  <input type="text" id="blackout" placeholder="ATL">
+  <div class="hint">Games involving these teams are flagged instead of routed to MLB.TV. Check your ZIP at mlb.com/live-stream-games/help-center/blackout-zip-code-lookup.</div>
+  <label>Rating colors</label>
+  <div class="legend"><span style="background:var(--r80)">80+</span><span style="background:var(--r70)">70–79</span><span style="background:var(--r60);color:#111">60–69</span><span style="background:var(--r50)">50–59</span><span style="background:var(--r0)">&lt;50</span></div>
+  <div class="row">
+    <button class="iconbtn" id="settingsCancel" type="button">Cancel</button>
+    <button class="iconbtn" id="settingsSave" type="button" style="background:#000;color:#fff">Save</button>
+  </div>
+</dialog>
+
+<script>
+/* =====================================================================
+   CONFIG — edit here to change teams, services, or channel numbers
+   ===================================================================== */
+const TZ = 'America/New_York';
+
+// Favorites. min = rating floor, bonus = points added, mark = icon shown.
+const FAVORITES = {
+  nfl:   { GB:  {min:85, mark:'⭐'} },
+  mlb:   { MIL: {min:80, mark:'⭐'} },
+  nhl:   { CAR: {min:82, mark:'⭐'}, CHI: {min:76, mark:'⭐'} },
+  ncaab: { WIS: {min:80, mark:'⭐'}, ILL: {bonus:12, mark:'✨'} },
+  ncaaf: { WIS: {min:80, mark:'⭐'}, ILL: {bonus:12, mark:'✨'} },
+  chky:  { WIS: {min:78, mark:'⭐'} },
+};
+
+// Charlotte-proximity ACC schools — secondary to the Big Ten, per your rules.
+const LOCAL_COLLEGE = ['DUKE','UNC','NCST'];
+
+// Events ESPN doesn't carry (LOVB volleyball, padel). Add rows here by hand;
+// they render like golf events. Leave empty and nothing shows.
+// {label:'LOVB', color:'#7b2d8b', name:'Atlanta vs Omaha', start:'2027-01-12T19:00:00-05:00',
+//  channels:['USA Network'], rating:55, venue:'Atlanta'}
+const MANUAL_EVENTS = [];
+
+// Leagues pulled from ESPN's public scoreboard feed.
+// months = [first, last] in season, 1-12, wrapping across New Year. Out-of-season
+// leagues aren't polled, which keeps the 30-second refresh light.
+const LEAGUES = [
+  {key:'nfl',   label:'NFL',    path:'football/nfl',                      color:'#013369', base:62, months:[8,2]},
+  {key:'ncaaf', label:'CFB',    path:'football/college-football',         color:'#7a1f1f', base:44, college:true, qs:'groups=80', months:[8,1]},
+  {key:'mlb',   label:'MLB',    path:'baseball/mlb',                      color:'#041E42', base:42, months:[2,11]},
+  {key:'wbc',   label:'WBC',    path:'baseball/world-baseball-classic',   color:'#1a4d9e', base:62, months:[2,3]},
+  {key:'nhl',   label:'NHL',    path:'hockey/nhl',                        color:'#3a3d42', base:48, months:[9,6]},
+  {key:'chky',  label:'CHKY',   path:'hockey/mens-college-hockey',        color:'#1d3557', base:42, college:true, months:[10,4]},
+  {key:'ncaab', label:'CBB',    path:'basketball/mens-college-basketball',color:'#c45a10', base:40, college:true, qs:'groups=50', months:[11,4]},
+  {key:'nba',   label:'NBA',    path:'basketball/nba',                    color:'#1d428a', base:34, watchableOnly:true, months:[10,6]},
+  {key:'golf',  label:'GOLF',   path:'golf/pga',                          color:'#7ec87a', base:55, event:true, darkText:true},
+  {key:'atp',   label:'TENNIS', path:'tennis/atp',                        color:'#f5d800', base:42, tennis:true, darkText:true},
+  {key:'wta',   label:'TENNIS', path:'tennis/wta',                        color:'#f5d800', base:40, tennis:true, darkText:true},
+];
+const inSeason = L => {
+  if(!L.months) return true;
+  const m = Number(new Intl.DateTimeFormat('en-US',{timeZone:TZ, month:'numeric'}).format(new Date()));
+  const [a,b] = L.months;
+  return a <= b ? (m >= a && m <= b) : (m >= a || m <= b);
+};
+
+// DirecTV Stream MySports channels (Charlotte). ch = guide number.
+// Each entry: regex on ESPN broadcast name → how Dan watches it.
+const SOURCES = [
+  [/^espn ?unl|^espn\+|^espn app|nhl power play/i, {label:'ESPN app', bg:'#c8102e', svc:'ESPN Unlimited'}],
+  [/^espn2$/i,               {label:'ESPN2', ch:209, bg:'#c8102e', also:'ESPN app'}],
+  [/^espnu$/i,               {label:'ESPNU', ch:208, bg:'#c8102e', also:'ESPN app'}],
+  [/^espnews$/i,             {label:'ESPNEWS', ch:207, bg:'#c8102e', also:'ESPN app'}],
+  [/^espn$/i,                {label:'ESPN', ch:206, bg:'#c8102e', also:'ESPN app'}],
+  [/^abc$/i,                 {label:'ABC', ch:9, bg:'#000', also:'ESPN app'}],
+  [/^cbs$/i,                 {label:'CBS', ch:3, bg:'#0033a0'}],
+  [/^nbc$/i,                 {label:'NBC', ch:6, bg:'#6c2dc7', also:'Peacock'}],
+  [/^fox$/i,                 {label:'FOX', ch:18, bg:'#003a70'}],
+  [/sec ?net|^secn/i,        {label:'SECN', ch:611, bg:'#004b8d', also:'ESPN app'}],
+  [/^acc ?n|acc network/i,   {label:'ACCN', ch:612, bg:'#013ca6', also:'ESPN app'}],
+  [/big ?ten|^btn/i,         {label:'BTN', ch:610, bg:'#0088ce'}],
+  [/cbs ?sports ?net|^cbssn/i,{label:'CBSSN', ch:221, bg:'#0033a0'}],
+  [/^fs1$|fox sports 1/i,    {label:'FS1', ch:219, bg:'#003a70'}],
+  [/^fs2$|fox sports 2/i,    {label:'FS2', ch:618, bg:'#003a70'}],
+  [/golf/i,                  {label:'Golf', ch:218, bg:'#1b5e20', also:'Peacock'}],
+  [/tennis ?ch|^tennis$/i,   {label:'Tennis Ch', ch:217, bg:'#2e7d32'}],
+  [/nhl ?net/i,              {label:'NHLN', ch:215, bg:'#000'}],
+  [/mlb ?net/i,              {label:'MLBN', ch:213, bg:'#041E42'}],
+  [/nfl ?net/i,              {label:'NFLN', ch:212, bg:'#013369'}],
+  [/nba ?tv/i,               {label:'NBA TV', ch:216, bg:'#1d428a'}],
+  [/^tbs$/i,                 {label:'TBS', ch:247, bg:'#222', also:'HBO Max'}],
+  [/^tnt|tnt sports/i,       {label:'TNT', ch:245, bg:'#222', also:'HBO Max'}],
+  [/trutv/i,                 {label:'truTV', ch:246, bg:'#222', also:'HBO Max'}],
+  [/^usa/i,                  {label:'USA', ch:242, bg:'#1c3f94', also:'Peacock'}],
+  [/peacock|nbcsn/i,         {label:'Peacock', bg:'#000', svc:'Peacock'}],
+  [/prime/i,                 {label:'Prime', bg:'#00a8e1', svc:'Prime Video'}],
+  [/apple/i,                 {label:'Apple TV', bg:'#000', svc:'Apple TV'}],
+  [/netflix/i,               {label:'Netflix', bg:'#e50914', svc:'Netflix'}],
+  [/hbo|^max$/i,             {label:'HBO Max', bg:'#002be7', svc:'HBO Max'}],
+  [/disney/i,                {label:'Disney+', bg:'#113ccf', svc:'Disney+'}],
+  [/hulu/i,                  {label:'Hulu', bg:'#1ce783', svc:'Hulu', dark:true}],
+  [/mlb\.?tv/i,              {label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', mlbtv:true}],
+  [/tubi/i,                  {label:'Tubi', bg:'#7408ff', svc:'free'}],
+  [/victory/i,               {label:'Victory+', bg:'#333', svc:'free'}],
+];
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const state = {
+  games: [], filters: loadJSON('ruwt.filters', {day:'today', status:'all', sport:'all', sort:'rating', show:'all'}),
+  lastOk: null, error: null, prevScores: new Map(), oddsCache: loadJSON('ruwt.odds', {}),
+  liveOdds: {}, liveOddsAt: 0, timer: null, loading: false,
+};
+function loadJSON(k, d){ try{ const v = localStorage.getItem(k); return v ? {...d, ...JSON.parse(v)} : d; }catch{ return d; } }
+function saveJSON(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+function getSetting(k, d=''){ try{ return localStorage.getItem(k) ?? d; }catch{ return d; } }
+function setSetting(k, v){ try{ localStorage.setItem(k, v); }catch{} }
+
+/* =====================================================================
+   DATES (always Eastern)
+   ===================================================================== */
+const fmtKey  = new Intl.DateTimeFormat('en-CA',{timeZone:TZ, year:'numeric', month:'2-digit', day:'2-digit'});
+const fmtTime = new Intl.DateTimeFormat('en-US',{timeZone:TZ, hour:'numeric', minute:'2-digit'});
+const fmtDay  = new Intl.DateTimeFormat('en-US',{timeZone:TZ, weekday:'short'});
+const fmtLong = new Intl.DateTimeFormat('en-US',{timeZone:TZ, weekday:'long', month:'short', day:'numeric'});
+const dayKey = d => fmtKey.format(d);                 // 2026-09-16
+const shiftDay = (d, n) => new Date(d.getTime() + n*86400000);
+const ymd = d => dayKey(d).replace(/-/g,'');
+
+/* =====================================================================
+   FETCH
+   ===================================================================== */
+async function getJSON(url, ms=12000){
+  const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), ms);
+  try{
+    const r = await fetch(url, {signal:ctl.signal, cache:'no-store'});
+    if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+async function fetchLeague(L){
+  const now = new Date();
+  const range = `${ymd(shiftDay(now,-1))}-${ymd(shiftDay(now,1))}`;
+  const base = `https://site.api.espn.com/apis/site/v2/sports/${L.path}/scoreboard`;
+  const params = [];
+  if(!L.event && !L.tennis) params.push('dates=' + range, 'limit=400');
+  if(L.qs) params.push(L.qs);
+  const url = base + (params.length ? '?' + params.join('&') : '');
+  const data = await getJSON(url);
+  return (data.events || []).flatMap(ev => normalizeEvent(L, ev)).filter(Boolean);
+}
+
+async function refresh(){
+  if(state.loading) return;
+  state.loading = true; setPulse('busy', 'Updating…');
+  const active = LEAGUES.filter(inSeason);
+  const results = await Promise.allSettled(active.map(fetchLeague));
+  const games = manualGames(); const failed = [];
+  results.forEach((r,i) => r.status === 'fulfilled' ? games.push(...r.value) : failed.push(active[i].key));
+  state.loading = false;
+  if(failed.length === active.length){
+    state.error = 'all';
+    setPulse('err', 'Feed unreachable');
+    showNotice(`Couldn't reach ESPN's score feed. If you opened this inside the Claude app, that's expected: Claude's viewer blocks outside data. Open the hosted copy (GitHub Pages) or the file in Safari/Chrome instead.`);
+    scheduleNext(); return;
+  }
+  state.error = failed.length ? failed : null;
+  showNotice('');
+  await maybeLiveOdds(games);
+  games.forEach(scoreGame);
+  state.games = games;
+  state.lastOk = Date.now();
+  saveJSON('ruwt.odds', state.oddsCache);
+  render();
+  scheduleNext();
+}
+
+function scheduleNext(){
+  clearTimeout(state.timer);
+  const anyLive = state.games.some(g => g.state === 'in');
+  const soon = state.games.some(g => g.state === 'pre' && g.start - Date.now() < 20*60000 && g.start > Date.now() - 5*60000);
+  const ms = state.error === 'all' ? 60000 : (anyLive || soon) ? 30000 : 300000;
+  if(!document.hidden) state.timer = setTimeout(refresh, ms);
+}
+
+/* =====================================================================
+   NORMALIZE ESPN → game objects
+   ===================================================================== */
+function normalizeEvent(L, ev){
+  if(L.tennis){
+    const comps = [...(ev.competitions||[]), ...((ev.groupings||[]).flatMap(g => g.competitions||[]))];
+    return comps.map(c => normalizeComp(L, ev, c));
+  }
+  if(L.event) return [normalizeGolf(L, ev)];
+  return (ev.competitions||[]).map(c => normalizeComp(L, ev, c));
+}
+
+function statusOf(obj){
+  const t = obj?.status?.type || {};
+  return { state: t.state || 'pre', detail: t.shortDetail || t.detail || '', completed: !!t.completed, name: t.name || '' };
+}
+
+function broadcastNames(c, ev){
+  const out = [];
+  const push = (name, market) => { if(name && !out.some(o=>o.name===name)) out.push({name, market:(market||'national').toLowerCase()}); };
+  (c.broadcasts||[]).forEach(b => (b.names||[]).forEach(n => push(n, b.market)));
+  (c.geoBroadcasts||[]).forEach(g => push(g.media?.shortName, g.market?.type));
+  (ev?.broadcasts||[]).forEach(b => (b.names||[]).forEach(n => push(n, b.market)));
+  if(!out.length && typeof c.broadcast === 'string') c.broadcast.split('/').forEach(n => push(n.trim(),'national'));
+  return out;
+}
+
+function sideFrom(L, comp){
+  const t = comp.team || {};
+  const a = comp.athlete || (comp.athletes && comp.athletes[0]) || null;
+  const rank = comp.curatedRank?.current;
+  const abbr = t.abbreviation || (a?.shortName || a?.displayName || '').split(' ').pop();
+  const fav = FAVORITES[L.key]?.[t.abbreviation];
+  return {
+    abbr,
+    name: t.shortDisplayName || t.displayName || a?.shortName || a?.displayName || comp.displayName || 'TBD',
+    full: t.displayName || a?.displayName || '',
+    logo: t.logo || t.logos?.[0]?.href || '',
+    flag: a?.flag?.href || '',
+    color: t.color ? '#' + t.color : '#555',
+    alt: t.alternateColor ? '#' + t.alternateColor : '#999',
+    score: comp.score != null ? String(comp.score?.displayValue ?? comp.score) : '',
+    sets: (comp.linescores||[]).map(l => l.displayValue ?? l.value).join(' '),
+    rank: rank && rank < 26 ? rank : null,
+    record: comp.records?.[0]?.summary || '',
+    conf: t.conferenceId || comp.team?.conferenceId || null,
+    winner: !!comp.winner,
+    fav,
+  };
+}
+
+function normalizeComp(L, ev, c){
+  const comps = c.competitors || [];
+  if(comps.length < 2) return null;
+  const home = comps.find(x => x.homeAway === 'home') || comps[0];
+  const away = comps.find(x => x.homeAway === 'away') || comps[1];
+  const st = statusOf(c.status ? c : ev);
+  const g = {
+    id: `${L.key}:${c.id || ev.id}`,
+    league: L, start: new Date(c.date || c.startDate || ev.date),
+    state: st.state, detail: st.detail, completed: st.completed,
+    home: sideFrom(L, home), away: sideFrom(L, away),
+    venue: [c.venue?.fullName, c.venue?.address?.city].filter(Boolean)[0] || '',
+    city: c.venue?.address ? [c.venue.address.city, c.venue.address.state].filter(Boolean).join(', ') : '',
+    tournament: L.tennis ? (ev.name || ev.shortName || '') : '',
+    round: c.round?.displayName || c.type?.text || '',
+    notes: (c.notes||[]).map(n => n.headline).filter(Boolean).join(' '),
+    postseason: (ev.season?.type === 3) || /playoff|bowl|championship|final/i.test((c.notes||[]).map(n=>n.headline).join(' ')),
+    broadcasts: broadcastNames(c, ev),
+    odds: parseOdds(c),
+    link: (ev.links||[]).find(l => (l.rel||[]).includes('summary'))?.href || '',
+    period: c.status?.period || 0, clock: c.status?.displayClock || '',
+    regPeriods: c.format?.regulation?.periods || null,
+    situation: c.situation || null,
+  };
+  // remember pregame odds so live games keep a line
+  if(g.odds) state.oddsCache[g.id] = {...g.odds, at: Date.now()};
+  else if(state.oddsCache[g.id]) g.odds = {...state.oddsCache[g.id], stale:true};
+  return g;
+}
+
+function normalizeGolf(L, ev){
+  const c = (ev.competitions||[])[0] || {};
+  const st = statusOf(c.status ? c : ev);
+  const players = (c.competitors||[]).slice().sort((a,b) => (a.sortOrder ?? a.order ?? 999) - (b.sortOrder ?? b.order ?? 999));
+  const lead = players[0];
+  const leadName = lead?.athlete?.shortName || lead?.athlete?.displayName || '';
+  const leadScore = lead?.score?.displayValue ?? lead?.score ?? '';
+  const name = ev.name || ev.shortName || 'PGA Tour';
+  return {
+    id: `golf:${ev.id}`, league: L, isEvent: true,
+    start: new Date(ev.date), end: ev.endDate ? new Date(ev.endDate) : null,
+    state: st.state, detail: st.detail, completed: st.completed,
+    name, lead: leadName ? `Leader: ${leadName} ${leadScore}` : '',
+    major: /masters|pga championship|u\.?s\.? open|open championship|the open|players championship|tour championship|ryder cup/i.test(name),
+    venue: c.venue?.fullName || ev.venues?.[0]?.fullName || '',
+    broadcasts: broadcastNames(c, ev),
+    home: {}, away: {},
+  };
+}
+
+function manualGames(){
+  const now = Date.now();
+  return MANUAL_EVENTS.map((m,i) => {
+    const start = new Date(m.start);
+    const end = m.end ? new Date(m.end) : new Date(start.getTime() + 3*3600000);
+    return {
+      id: 'manual:' + i, isEvent: true, manualRating: m.rating,
+      league: {key:'manual', label:m.label, color:m.color || '#555', base:m.rating || 50, event:true, darkText:!!m.darkText},
+      start, state: now > end ? 'post' : now >= start ? 'in' : 'pre',
+      detail: now > end ? 'Final' : now >= start ? 'Live' : '',
+      name: m.name, lead: m.note || '', venue: m.venue || '',
+      broadcasts: (m.channels||[]).map(n => ({name:n, market:'national'})),
+      home: {}, away: {},
+    };
+  });
+}
+
+function parseOdds(c){
+  const o = (c.odds||[])[0];
+  if(!o) return null;
+  const num = v => (v == null || v === '' ? null : String(v));
+  const ml = {
+    home: num(o.homeTeamOdds?.moneyLine ?? o.moneyline?.home?.close?.odds ?? o.moneyline?.home?.open?.odds),
+    away: num(o.awayTeamOdds?.moneyLine ?? o.moneyline?.away?.close?.odds ?? o.moneyline?.away?.open?.odds),
+  };
+  const total = o.overUnder ?? o.total?.over?.close?.line?.replace?.(/^o/i,'') ?? null;
+  const spread = o.details && o.details !== 'EVEN' ? o.details : (o.details || null);
+  if(!ml.home && !ml.away && total == null && !spread) return null;
+  return { ml, total: total != null ? String(total) : null, spread, book: o.provider?.name || '' };
+}
+
+/* =====================================================================
+   WHERE TO WATCH
+   ===================================================================== */
+function blackoutList(){ return getSetting('ruwt.blackout','ATL').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean); }
+
+function resolveWatch(g){
+  const found = [];
+  for(const b of g.broadcasts){
+    const hit = SOURCES.find(([re]) => re.test(b.name.trim()));
+    if(hit) found.push({...hit[1], raw:b.name, market:b.market});
+    else found.push({label:b.name, raw:b.name, market:b.market, unknown:true});
+  }
+  const L = g.league.key;
+  const teams = [g.home?.abbr, g.away?.abbr].filter(Boolean);
+  const blacked = L === 'mlb' && teams.some(t => blackoutList().includes(t));
+
+  // Usable = DTV channel or a service Dan has. Regional names are unknown → not usable.
+  let usable = found.filter(f => !f.unknown && !(f.mlbtv && blacked));
+
+  // League fallbacks when the feed only lists regional networks
+  if(!usable.length){
+    if(L === 'mlb' && !blacked) usable = [{label:'MLB.TV', bg:'#041E42', svc:'MLB.TV'}];
+    else if(L === 'nhl' && !teams.includes('CAR')) usable = [{label:'ESPN app', bg:'#c8102e', svc:'ESPN Unlimited', guess:true}];
+    else if(L === 'chky') usable = [{label:'ESPN app', bg:'#c8102e', svc:'ESPN Unlimited', guess:true}];
+    else if(L === 'wbc') usable = [{label:'Netflix', bg:'#e50914', svc:'Netflix', guess:true}];
+    else if(g.league.tennis && found.length === 0) usable = [{label:'Tennis Ch', ch:217, bg:'#2e7d32', guess:true}];
+    else if(g.league.event && found.length === 0) usable = [{label:'Golf', ch:218, bg:'#1b5e20', also:'Peacock', guess:true}];
+  }
+  const dtv = usable.filter(u => u.ch).sort((a,b) => (a.market==='national'?0:1) - (b.market==='national'?0:1));
+  const stream = usable.filter(u => !u.ch);
+  const primary = dtv[0] || stream[0] || null;
+  const alts = [...new Set([primary?.also, ...usable.filter(u => u !== primary).map(u => u.label)].filter(Boolean))].slice(0,2);
+  const regional = found.filter(f => f.unknown).map(f => f.label);
+  return {
+    primary, alts, ok: !!primary,
+    note: primary ? (primary.ch ? `DTV ${primary.ch}` : (primary.guess ? 'likely' : 'streaming'))
+                  : (blacked ? 'MLB.TV blackout' : regional[0] ? `${regional[0]}, not in your lineup` : 'no listing'),
+  };
+}
+
+/* =====================================================================
+   RATING (0–100)
+   ===================================================================== */
+const POWER_CFB = [1,4,5,8];      // ACC, Big 12, Big Ten, SEC (ESPN conference ids)
+const POWER_CBB = [2,4,7,8,23];   // ACC, Big East, Big Ten, Big 12, SEC
+const BIG_TEN = {ncaaf:5, ncaab:7}, ACC = {ncaaf:1, ncaab:2};
+
+function scoreGame(g){
+  const L = g.league; const why = [];
+  let r = L.base; why.push(`${L.label} base ${L.base}`);
+  g.watch = resolveWatch(g);
+
+  if(g.isEvent){
+    if(g.manualRating){ g.watch = resolveWatch(g); g.rating = g.manualRating; g.why = 'set by hand'; return; }
+    if(g.major){ r += 28; why.push('major +28'); }
+    if(g.state === 'in'){ r += 8; why.push('live +8'); }
+    if(/final round|round 4|rd 4/i.test(g.detail)){ r += 8; why.push('final round +8'); }
+    return finish(g, r, why);
+  }
+
+  if(L.tennis){
+    const t = g.tournament;
+    if(/australian open|roland garros|french open|wimbledon|us open/i.test(t)){ r += 25; why.push('Slam +25'); }
+    else if(/indian wells|bnp paribas|miami|cincinnati|western|winston|charleston|credit one/i.test(t)){ r += 18; why.push('priority event +18'); }
+    if(/^final/i.test(g.round)){ r += 20; why.push('final +20'); }
+    else if(/semi/i.test(g.round)){ r += 12; why.push('semi +12'); }
+    else if(/quarter/i.test(g.round)){ r += 6; why.push('QF +6'); }
+  }
+
+  // Ranked matchups (college)
+  if(L.college){
+    for(const s of [g.home, g.away]) if(s.rank){ const b = Math.round((26 - s.rank)/2.5); r += b; why.push(`#${s.rank} ${s.abbr} +${b}`); }
+    if(g.home.rank && g.away.rank){ r += 6; why.push('ranked vs ranked +6'); }
+    const confs = [g.home.conf, g.away.conf].map(Number);
+    if(confs.includes(BIG_TEN[L.key])){ r += 8; why.push('Big Ten +8'); }
+    else if(confs.includes(ACC[L.key])){ r += 4; why.push('ACC +4'); }
+    const local = [g.home.abbr, g.away.abbr].filter(a => LOCAL_COLLEGE.includes(a));
+    if(local.length){ r += 4; why.push(`${local.join('/')} nearby +4`); }
+  }
+  if(g.postseason){ r += 12; why.push('postseason +12'); }
+
+  // Pregame closeness from moneyline
+  const mls = [g.odds?.ml?.home, g.odds?.ml?.away].map(v => parseInt(v,10)).filter(n => !isNaN(n));
+  if(g.state === 'pre' && mls.length){
+    const fav = Math.min(...mls);
+    const b = fav > -130 ? 6 : fav > -180 ? 3 : fav < -300 ? -6 : 0;
+    if(b){ r += b; why.push(`line ${fav} ${b>0?'+':''}${b}`); }
+  }
+
+  // Live / final drama
+  const hs = parseFloat(g.home.score), as = parseFloat(g.away.score);
+  if(g.state !== 'pre' && !isNaN(hs) && !isNaN(as) && !L.tennis){
+    const m = Math.abs(hs - as);
+    const close = {nfl:8, ncaaf:8, mlb:2, nhl:1, ncaab:6, nba:6}[L.key] ?? 3;
+    const late = isLate(g);
+    if(m <= close){ const b = late ? 16 : 6; r += b; why.push(`${late?'close late':'close'} +${b}`); }
+    else if(m > close*3){ r -= 12; why.push('blowout −12'); }
+    if(/\bOT\b|\/\d+|extra/.test(g.detail) || (g.regPeriods && g.period > g.regPeriods)){ r += 8; why.push('overtime +8'); }
+  }
+  if(g.state === 'in'){ r += 5; why.push('live +5'); }
+  if(g.state === 'post'){ r -= 8; why.push('final −8'); }
+
+  // Favorites last so their floors stick
+  for(const s of [g.home, g.away]){
+    if(!s.fav) continue;
+    if(s.fav.bonus){ r += s.fav.bonus; why.push(`${s.abbr} ${s.fav.mark} +${s.fav.bonus}`); }
+    if(s.fav.min && r < s.fav.min){ r = s.fav.min; why.push(`${s.abbr} ${s.fav.mark} floor ${s.fav.min}`); }
+  }
+  return finish(g, r, why);
+}
+function finish(g, r, why){
+  if(!g.watch.ok && !hasFav(g)){ r -= 15; why.push('not in your lineup −15'); }
+  g.rating = Math.max(1, Math.min(99, Math.round(r)));
+  g.why = why.join(' · ');
+}
+function hasFav(g){ return !!(g.home?.fav || g.away?.fav); }
+function isLate(g){
+  const k = g.league.key, p = g.period;
+  if(k === 'nfl' || k === 'ncaaf') return p >= 4;
+  if(k === 'nba') return p >= 4;
+  if(k === 'ncaab') return p >= 2;
+  if(k === 'nhl') return p >= 3;
+  if(k === 'mlb') return p >= 7;
+  return false;
+}
+
+/* =====================================================================
+   OPTIONAL LIVE ODDS (The Odds API)
+   ===================================================================== */
+const ODDS_KEYS = {nfl:'americanfootball_nfl', ncaaf:'americanfootball_ncaaf', mlb:'baseball_mlb', nhl:'icehockey_nhl', ncaab:'basketball_ncaab', nba:'basketball_nba'};
+async function maybeLiveOdds(games){
+  const key = getSetting('ruwt.oddsKey','').trim();
+  if(!key) return;
+  const live = games.filter(g => g.state === 'in' && ODDS_KEYS[g.league.key]);
+  if(!live.length || Date.now() - state.liveOddsAt < 10*60000){ applyLiveOdds(games); return; }
+  state.liveOddsAt = Date.now();
+  const sports = [...new Set(live.map(g => ODDS_KEYS[g.league.key]))];
+  await Promise.allSettled(sports.map(async sk => {
+    const url = `https://api.the-odds-api.com/v4/sports/${sk}/odds?regions=us&markets=h2h,totals&oddsFormat=american&apiKey=${encodeURIComponent(key)}`;
+    const rows = await getJSON(url);
+    for(const row of rows){
+      const bk = row.bookmakers?.find(b => b.key === 'draftkings') || row.bookmakers?.[0];
+      if(!bk) continue;
+      const h2h = bk.markets?.find(m => m.key === 'h2h');
+      const tot = bk.markets?.find(m => m.key === 'totals');
+      state.liveOdds[norm(row.home_team) + '|' + norm(row.away_team)] = {
+        ml: { home: fmtML(h2h?.outcomes?.find(o => o.name === row.home_team)?.price),
+              away: fmtML(h2h?.outcomes?.find(o => o.name === row.away_team)?.price) },
+        total: tot?.outcomes?.find(o => o.name === 'Over')?.point ?? null,
+        live: true, book: bk.title,
+      };
+    }
+  }));
+  applyLiveOdds(games);
+}
+function applyLiveOdds(games){
+  for(const g of games){
+    if(g.state !== 'in' || !g.home?.full) continue;
+    const lo = state.liveOdds[norm(g.home.full) + '|' + norm(g.away.full)];
+    if(lo) g.odds = {...(g.odds||{}), ml: lo.ml, total: lo.total != null ? String(lo.total) : g.odds?.total, live:true, stale:false};
+  }
+}
+const norm = s => (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const fmtML = v => v == null ? null : (v > 0 ? '+' + v : String(v));
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rClass = r => r >= 80 ? 'r80' : r >= 70 ? 'r70' : r >= 60 ? 'r60' : r >= 50 ? 'r50' : 'r0';
+
+function teamMark(s){
+  if(s.flag) return `<img class="flag" src="${esc(s.flag)}" alt="" loading="lazy">`;
+  const chip = `<span class="tchip" style="background:${esc(s.color)};border-bottom-color:${esc(s.alt)}">${esc(s.abbr||'')}</span>`;
+  if(!s.logo) return chip;
+  return `<img class="logo" src="${esc(s.logo)}" alt="" loading="lazy" data-chip="${esc(chip)}">`;
+}
+// Swap any logo that fails to load for its color chip
+document.addEventListener('error', e => {
+  const el = e.target;
+  if(el.tagName === 'IMG' && el.classList.contains('logo') && el.dataset.chip){
+    const t = document.createElement('template'); t.innerHTML = el.dataset.chip; el.replaceWith(t.content);
+  } else if(el.tagName === 'IMG' && el.classList.contains('flag')) el.remove();
+}, true);
+
+function sideHTML(g, s, cls){
+  const isTen = g.league.tennis;
+  const score = g.state === 'pre' ? '' : (isTen ? s.sets : s.score);
+  const win = g.state === 'post' && s.winner ? ' win' : '';
+  return `<div class="team ${cls}${win}">${teamMark(s)}
+    <span class="nm">${s.rank ? `<span class="rk">#${s.rank}</span>` : ''}${esc(s.name)}${s.fav ? `<span class="fav" aria-label="favorite">${s.fav.mark}</span>` : ''}${s.record && g.state==='pre' ? `<span class="rec">${esc(s.record)}</span>` : ''}</span>
+    ${score !== '' ? `<span class="mscore">${esc(score)}</span>` : ''}</div>`;
+}
+
+function statusHTML(g){
+  const t = fmtTime.format(g.start);
+  const today = dayKey(new Date()) === dayKey(g.start);
+  const when = today ? t : `${fmtDay.format(g.start)} ${t}`;
+  if(g.state === 'in') return `<span class="st live">${esc(g.detail || 'Live')}</span><span>${esc(when)}</span>`;
+  if(g.state === 'post') return `<span class="st">${esc(g.detail || 'Final')}</span><span>${esc(when)}</span>`;
+  return `<span class="st">${esc(when)}</span>${/postpon|delay|cancel/i.test(g.detail) ? `<span>${esc(g.detail)}</span>` : ''}`;
+}
+
+function chanHTML(g){
+  const w = g.watch;
+  if(!w.ok) return `<div class="chan bad"><span class="pill">Check</span><span class="sub">${esc(w.note)}</span></div>`;
+  const p = w.primary;
+  return `<div class="chan"><span class="pill" style="background:${esc(p.bg||'#333')};${p.dark?'color:#111':''}">${esc(p.label)}</span>
+    <span class="sub">${esc(w.note)}</span>${w.alts.length ? `<span class="alt">or ${esc(w.alts.join(', '))}</span>` : ''}</div>`;
+}
+
+function oddsHTML(g){
+  const o = g.odds;
+  if(!o || g.league.tennis) return `<div class="odds"></div>`;
+  const parts = [];
+  const favSide = pickFav(o.ml);
+  if(favSide) parts.push(`<span><span class="lbl">ML</span> ${esc(g[favSide].abbr)} ${esc(o.ml[favSide])}</span>`);
+  if(o.spread && ['nfl','ncaaf','ncaab','nba'].includes(g.league.key)) parts.push(`<span><span class="lbl">Line</span> ${esc(o.spread)}</span>`);
+  if(o.total) parts.push(`<span><span class="lbl">O/U</span> ${esc(o.total)}</span>`);
+  const tag = o.live ? '<span class="tag">LIVE</span>' : (o.stale && g.state !== 'pre') ? '<span class="tag">PRE</span>' : '';
+  return `<div class="odds">${parts.join('<br>')}${tag}</div>`;
+}
+function pickFav(ml){
+  if(!ml) return null;
+  const h = parseInt(ml.home,10), a = parseInt(ml.away,10);
+  if(isNaN(h) && isNaN(a)) return null;
+  if(isNaN(a)) return 'home'; if(isNaN(h)) return 'away';
+  return h <= a ? 'home' : 'away';
+}
+
+function gameHTML(g){
+  const L = g.league;
+  const sb = `<span class="sbadge${L.darkText?' dark':''}" style="background:${L.color}">${L.label}</span>`;
+  const rate = `<span class="rbox ${rClass(g.rating)}" title="${esc(g.why)}" aria-label="Rating ${g.rating}">${g.rating}</span>`;
+  const common = `style="--sc:${L.color}" data-id="${esc(g.id)}"`;
+  if(g.isEvent){
+    return `<article class="game event" ${common}>
+      <span class="strip" style="background:${L.color}"></span>${sb}${rate}
+      <div class="time">${statusHTML(g)}</div>
+      <div class="evname">${esc(g.name)}<span class="lead">${esc(g.lead)}</span></div>
+      ${chanHTML(g)}<div class="venue">${esc(g.venue)}</div><div class="odds"></div></article>`;
+  }
+  const hs = g.home.score, as = g.away.score;
+  const isTen = L.tennis;
+  const mid = g.state === 'pre' || isTen ? `<span class="vs">${isTen ? esc(g.round || 'vs') : 'at'}</span>` : `${esc(as)}–${esc(hs)}`;
+  const venue = isTen ? g.tournament : (g.venue + (g.notes ? ` · ${g.notes}` : ''));
+  const inner = `<span class="strip" style="background:${L.color}"></span>${sb}${rate}
+      <div class="time">${statusHTML(g)}</div>
+      ${sideHTML(g, g.away, 'away')}
+      <div class="score" data-score="${esc(as+'-'+hs)}">${mid}</div>
+      ${sideHTML(g, g.home, 'home')}
+      ${chanHTML(g)}<div class="venue" title="${esc(g.city)}">${esc(venue)}</div>${oddsHTML(g)}`;
+  return `<article class="game" ${common}>${inner}</article>`;
+}
+
+function visibleGames(){
+  const f = state.filters, now = new Date();
+  const tKey = dayKey(now), yKey = dayKey(shiftDay(now,-1));
+  return state.games.filter(g => {
+    if(g.league.watchableOnly && !g.watch.ok) return false;
+    if(g.league.college && !collegeRelevant(g)) return false;
+    if(f.sport !== 'all' && g.league.label !== f.sport) return false;
+    if(f.show === 'watchable' && !g.watch.ok) return false;
+    const k = g.isEvent ? (g.state === 'in' ? tKey : dayKey(g.start)) : dayKey(g.start);
+    if(f.day === 'today' && k !== tKey && g.state !== 'in') return false;
+    if(f.day === 'all' && k === yKey && g.state !== 'post') return false;
+    const s = f.status;
+    if(s === 'live' && g.state !== 'in') return false;
+    if(s === 'later' && g.state !== 'pre') return false;
+    if(s === 'final' && g.state !== 'post') return false;
+    return true;
+  });
+}
+function collegeRelevant(g){
+  if(g.league.key === 'chky') return true;   // Big Ten / NCHC / NCAA tournament all count
+  if(hasFav(g) || g.home.rank || g.away.rank) return true;
+  if([g.home.abbr, g.away.abbr].some(a => LOCAL_COLLEGE.includes(a))) return true;
+  const power = g.league.key === 'ncaaf' ? POWER_CFB : POWER_CBB;
+  if([g.home.conf, g.away.conf].some(c => power.includes(Number(c)))) return true;
+  return !!g.watch.primary?.ch; // on a linear channel Dan gets
+}
+
+function render(){
+  const now = new Date();
+  $('#today').textContent = fmtLong.format(now);
+  renderFilters();
+  const list = visibleGames();
+  const sorter = state.filters.sort === 'time'
+    ? (a,b) => a.start - b.start || b.rating - a.rating
+    : (a,b) => b.rating - a.rating || a.start - b.start;
+  const tKey = dayKey(now);
+  const groups = [
+    {key:'live',  title:'Live now',    live:true, items:list.filter(g => g.state === 'in')},
+    {key:'later', title:'Later today', items:list.filter(g => g.state === 'pre' && dayKey(g.start) === tKey)},
+    {key:'next',  title:'Tomorrow',    items:list.filter(g => g.state === 'pre' && dayKey(g.start) > tKey)},
+    {key:'final', title:'Final',       items:list.filter(g => g.state === 'post' && dayKey(g.start) === tKey)},
+    {key:'prev',  title:'Yesterday',   items:list.filter(g => g.state === 'post' && dayKey(g.start) < tKey)},
+  ];
+  const html = groups.filter(gr => gr.items.length).map(gr =>
+    `<section aria-labelledby="h-${gr.key}"><h2 class="shead" id="h-${gr.key}">${gr.live ? '<span class="livedot" aria-hidden="true"></span>' : ''}${gr.title} <span class="count">${gr.items.length}</span></h2>
+     ${gr.items.sort(sorter).map(gameHTML).join('')}</section>`).join('');
+  const sec = $('#sections');
+  sec.innerHTML = html || `<div class="empty">Nothing matches these filters. Tap <b>All</b> on any row to widen the view.</div>`;
+  flashScores(sec);
+  renderLastNight(); renderOnDeck(); tickPulse();
+}
+
+function flashScores(root){
+  root.querySelectorAll('.game').forEach(el => {
+    const id = el.dataset.id; const sc = el.querySelector('.score')?.dataset.score;
+    if(sc == null) return;
+    const prev = state.prevScores.get(id);
+    if(prev != null && prev !== sc){ el.querySelector('.score').classList.add('bump'); el.querySelectorAll('.mscore').forEach(m => m.classList.add('score','bump')); }
+    state.prevScores.set(id, sc);
+  });
+}
+
+function renderFilters(){
+  const f = state.filters;
+  const counts = {};
+  state.games.forEach(g => { counts[g.league.label] = (counts[g.league.label]||0) + 1; });
+  const sports = ['all', ...LEAGUES.map(l => l.label).filter((v,i,a) => a.indexOf(v) === i && counts[v])];
+  const row = (label, key, opts) => `<div class="frow" role="group" aria-label="${label}"><span class="flabel">${label}</span>${
+    opts.map(([v,t,n]) => `<button class="chip" type="button" data-k="${key}" data-v="${v}" aria-pressed="${f[key]===v}">${t}${n?`<span class="n">${n}</span>`:''}</button>`).join('')}</div>`;
+  $('#filters').innerHTML =
+    row('Day','day',[['today','Today'],['all','All']]) +
+    row('Status','status',[['all','All'],['live','Live'],['later','Later'],['final','Final']]) +
+    row('Sport','sport', sports.map(s => [s, s === 'all' ? 'All' : s])) +
+    row('Sort','sort',[['rating','Rating'],['time','Time']]) +
+    row('Show','show',[['all','All'],['watchable','My channels']]);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if(!b) return;
+  state.filters[b.dataset.k] = b.dataset.v; saveJSON('ruwt.filters', state.filters); render();
+});
+
+function renderLastNight(){
+  const y = dayKey(shiftDay(new Date(), -1));
+  const items = state.games.filter(g => g.state === 'post' && !g.isEvent && dayKey(g.start) === y && (hasFav(g) || g.rating >= 60))
+    .sort((a,b) => (hasFav(b)-hasFav(a)) || b.rating - a.rating).slice(0,12);
+  const box = $('#lastnight');
+  if(!items.length){ box.hidden = true; return; }
+  box.hidden = false;
+  $('#lastnightIn').innerHTML = '<b>Last night</b>' + items.map(g => {
+    const w = g.home.winner ? g.home : g.away, l = g.home.winner ? g.away : g.home;
+    const mark = (w.fav?.mark || l.fav?.mark || '');
+    return `<span>${mark}${esc(w.abbr)} ${esc(g.league.tennis ? w.sets : w.score)}, ${esc(l.abbr)} ${esc(g.league.tennis ? l.sets : l.score)}${/OT|\//.test(g.detail) ? ' ('+esc(g.detail.replace(/final\/?/i,''))+')' : ''}</span>`;
+  }).join('');
+}
+
+function renderOnDeck(){
+  const up = state.games.filter(g => hasFav(g) && g.state !== 'post').sort((a,b) => a.start - b.start)[0];
+  const el = $('#ondeck');
+  if(!up){ el.textContent = 'On deck: no favorite-team games in the next day.'; return; }
+  const f = up.home.fav ? up.home : up.away;
+  const opp = up.home.fav ? up.away : up.home;
+  const when = up.state === 'in' ? `LIVE ${up.detail}` : `${fmtDay.format(up.start)} ${fmtTime.format(up.start)}`;
+  const ch = up.watch.primary ? `${up.watch.primary.label}${up.watch.primary.ch ? ' ' + up.watch.primary.ch : ''}` : up.watch.note;
+  el.textContent = `On deck: ${f.fav.mark} ${f.name} ${up.home.fav ? 'vs' : 'at'} ${opp.name}, ${when}, ${ch}`;
+}
+
+/* Status pill */
+function setPulse(kind, text){ const p = $('#pulse'); p.className = 'pulse ' + (kind==='err'?'err':kind==='ok'?'ok':''); $('#pulseText').textContent = text; }
+function tickPulse(){
+  if(!state.lastOk || state.loading) return;
+  const s = Math.round((Date.now() - state.lastOk)/1000);
+  const ago = s < 60 ? `${s}s ago` : `${Math.round(s/60)}m ago`;
+  const partial = Array.isArray(state.error) ? ` (${state.error.length} feed${state.error.length>1?'s':''} down)` : '';
+  setPulse(state.error ? 'err' : 'ok', `Updated ${ago}${partial}`);
+}
+setInterval(tickPulse, 5000);
+function showNotice(msg){ $('#notice').innerHTML = msg ? `<div class="notice">${esc(msg)}</div>` : ''; }
+
+/* Settings */
+$('#settingsBtn').onclick = () => {
+  $('#oddsKey').value = getSetting('ruwt.oddsKey','');
+  $('#blackout').value = getSetting('ruwt.blackout','ATL');
+  $('#settings').showModal();
+};
+$('#settingsCancel').onclick = () => $('#settings').close();
+$('#settingsSave').onclick = () => {
+  setSetting('ruwt.oddsKey', $('#oddsKey').value.trim());
+  setSetting('ruwt.blackout', $('#blackout').value.trim());
+  state.liveOddsAt = 0; $('#settings').close(); refresh();
+};
+$('#refreshBtn').onclick = () => refresh();
+
+/* Pause while hidden, catch up on return */
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden) clearTimeout(state.timer);
+  else refresh();
+});
+window.addEventListener('pagehide', () => {
+  // keep only recent odds
+  const cutoff = Date.now() - 3*86400000;
+  for(const k in state.oddsCache) if(state.oddsCache[k].at < cutoff) delete state.oddsCache[k];
+  saveJSON('ruwt.odds', state.oddsCache);
+});
+
+refresh();
+</script>
+</body>
+</html>
