@@ -217,9 +217,9 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 
 <dialog id="settings">
   <h2>Settings</h2>
-  <label for="oddsKey">Live odds key (optional)</label>
-  <input type="text" id="oddsKey" placeholder="The Odds API key" autocomplete="off">
-  <div class="hint">ESPN's free feed gives pregame lines only. A key from the-odds-api.com adds in-game moneylines and totals, refreshed every 10 minutes while games are live.</div>
+  <div class="hint" style="margin-bottom:10px">Odds are the pregame numbers from ESPN's feed. Lines on a game in progress are the ones posted before first pitch or kickoff.</div>
+  <label>Feeds, last refresh</label>
+  <div class="hint" id="feedStatus">—</div>
   <div class="hint" style="margin-top:12px">Braves, Reds, Nationals and Orioles games are treated as blacked out on MLB.TV and flagged instead.</div>
   <label>Rating colors</label>
   <div class="legend"><span style="background:var(--r80)">80+</span><span style="background:var(--r70)">70–79</span><span style="background:var(--r60);color:#111">60–69</span><span style="background:var(--r50)">50–59</span><span style="background:var(--r0)">&lt;50</span></div>
@@ -351,7 +351,7 @@ const SOURCES = [
 const state = {
   games: [], filters: loadJSON('ruwt.filters', {day:'today', status:'all', sport:'all', sort:'rating', show:'all'}),
   lastOk: null, error: null, prevScores: new Map(), oddsCache: loadJSON('ruwt.odds', {}),
-  liveOdds: {}, liveOddsAt: 0, timer: null, loading: false,
+  timer: null, loading: false, feeds: {},
 };
 function loadJSON(k, d){ try{ const v = localStorage.getItem(k); return v ? {...d, ...JSON.parse(v)} : d; }catch{ return d; } }
 function saveJSON(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
@@ -411,9 +411,16 @@ async function refresh(){
   const active = LEAGUES.filter(inSeason);
   const results = await Promise.allSettled(active.map(fetchLeague));
   const games = manualGames(); const failed = [];
+  state.feeds = {};
   results.forEach((r,i) => {
-    if(r.status === 'fulfilled') games.push(...r.value);
-    else if(!active[i].optional) failed.push(active[i].key);
+    const L = active[i];
+    if(r.status === 'fulfilled'){
+      games.push(...r.value);
+      state.feeds[L.label + '/' + L.key] = `${r.value.length} event${r.value.length === 1 ? '' : 's'}`;
+    } else {
+      state.feeds[L.label + '/' + L.key] = `failed: ${String(r.reason?.message || r.reason).slice(0,40)}`;
+      if(!L.optional) failed.push(L.key);
+    }
   });
   state.loading = false;
   if(failed.length === active.length){
@@ -424,7 +431,6 @@ async function refresh(){
   }
   state.error = failed.length ? failed : null;
   showNotice('');
-  await maybeLiveOdds(games);
   state.mlbRace = mlbRace(games);
   games.forEach(scoreGame);
   state.games = games;
@@ -795,45 +801,6 @@ function isLate(g){
 }
 
 /* =====================================================================
-   OPTIONAL LIVE ODDS (The Odds API)
-   ===================================================================== */
-const ODDS_KEYS = {nfl:'americanfootball_nfl', ncaaf:'americanfootball_ncaaf', mlb:'baseball_mlb', nhl:'icehockey_nhl', ncaab:'basketball_ncaab', nba:'basketball_nba'};
-async function maybeLiveOdds(games){
-  const key = getSetting('ruwt.oddsKey','').trim();
-  if(!key) return;
-  const live = games.filter(g => g.state === 'in' && ODDS_KEYS[g.league.key]);
-  if(!live.length || Date.now() - state.liveOddsAt < 10*60000){ applyLiveOdds(games); return; }
-  state.liveOddsAt = Date.now();
-  const sports = [...new Set(live.map(g => ODDS_KEYS[g.league.key]))];
-  await Promise.allSettled(sports.map(async sk => {
-    const url = `https://api.the-odds-api.com/v4/sports/${sk}/odds?regions=us&markets=h2h,totals&oddsFormat=american&apiKey=${encodeURIComponent(key)}`;
-    const rows = await getJSON(url);
-    for(const row of rows){
-      const bk = row.bookmakers?.find(b => b.key === 'draftkings') || row.bookmakers?.[0];
-      if(!bk) continue;
-      const h2h = bk.markets?.find(m => m.key === 'h2h');
-      const tot = bk.markets?.find(m => m.key === 'totals');
-      state.liveOdds[norm(row.home_team) + '|' + norm(row.away_team)] = {
-        ml: { home: fmtML(h2h?.outcomes?.find(o => o.name === row.home_team)?.price),
-              away: fmtML(h2h?.outcomes?.find(o => o.name === row.away_team)?.price) },
-        total: tot?.outcomes?.find(o => o.name === 'Over')?.point ?? null,
-        live: true, book: bk.title,
-      };
-    }
-  }));
-  applyLiveOdds(games);
-}
-function applyLiveOdds(games){
-  for(const g of games){
-    if(g.state !== 'in' || !g.home?.full) continue;
-    const lo = state.liveOdds[norm(g.home.full) + '|' + norm(g.away.full)];
-    if(lo) g.odds = {...(g.odds||{}), ml: lo.ml, total: lo.total != null ? String(lo.total) : g.odds?.total, live:true, stale:false};
-  }
-}
-const norm = s => (s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-const fmtML = v => v == null ? null : (v > 0 ? '+' + v : String(v));
-
-/* =====================================================================
    RENDER
    ===================================================================== */
 const $ = s => document.querySelector(s);
@@ -904,7 +871,7 @@ function oddsHTML(g){
     : (g.league.key === 'mlb' && favSide) ? `${esc(g[favSide].abbr)} −1.5`
     : (g.league.key === 'nhl' && favSide) ? `${esc(g[favSide].abbr)} −1.5` : none;
   const ou   = o.total ? esc(o.total) : none;
-  const tag = o.live ? '<span class="tag">LIVE</span>' : (o.stale && g.state !== 'pre') ? '<span class="tag">PRE</span>' : '';
+  const tag = (o.stale && g.state !== 'pre') ? '<span class="tag">PRE</span>' : '';
   return `<div class="odds"><span><span class="lbl">ML</span> ${ml}</span><br>
     <span><span class="lbl">Line</span> ${line}</span><br>
     <span><span class="lbl">O/U</span> ${ou}${tag}</span></div>`;
@@ -953,8 +920,16 @@ function visibleGames(){
     if(g.league.college && !collegeRelevant(g)) return false;
     if(f.sport !== 'all' && g.league.label !== f.sport) return false;
     if(f.show === 'watchable' && !g.watch.ok) return false;
-    const k = g.isEvent ? (g.state === 'in' ? tKey : dayKey(g.start)) : dayKey(g.start);
     const mKey = dayKey(shiftDay(now, 1));
+    if(g.isEvent){
+      // A tournament runs Thursday to Sunday: it belongs to every day in that window,
+      // not just the day it teed off. Without an end date, assume a four-day event.
+      const end = g.end || new Date(g.start.getTime() + 4*86400000);
+      const want = f.day === 'today' ? tKey : mKey;
+      const inWindow = want >= dayKey(g.start) && want <= dayKey(end);
+      return inWindow || (f.day === 'today' && g.state === 'in');
+    }
+    const k = dayKey(g.start);
     if(f.day === 'today' && k !== tKey && g.state !== 'in') return false;
     if(f.day === 'tomorrow' && k !== mKey) return false;
     const s = f.status;
@@ -997,9 +972,9 @@ function render(){
   const tKey = dayKey(now);
   const groups = [
     {key:'live',  title:'Live now',    live:true, items:list.filter(g => g.state === 'in')},
-    {key:'later', title:'Later today', items:list.filter(g => g.state === 'pre' && dayKey(g.start) === tKey)},
+    {key:'later', title:'Later today', items:list.filter(g => g.state === 'pre' && (g.isEvent || dayKey(g.start) === tKey))},
     {key:'next',  title:'Tomorrow',    items:list.filter(g => g.state === 'pre' && dayKey(g.start) > tKey)},
-    {key:'final', title:'Final',       items:list.filter(g => g.state === 'post' && dayKey(g.start) === tKey)},
+    {key:'final', title:'Final',       items:list.filter(g => g.state === 'post' && (g.isEvent || dayKey(g.start) === tKey))},
   ];
   const html = groups.filter(gr => gr.items.length).map(gr =>
     `<section aria-labelledby="h-${gr.key}"><h2 class="shead" id="h-${gr.key}">${gr.live ? '<span class="livedot" aria-hidden="true"></span>' : ''}${gr.title} <span class="count">${gr.items.length}</span></h2>
@@ -1085,13 +1060,13 @@ function showNotice(msg){ $('#notice').innerHTML = msg ? `<div class="notice">${
 
 /* Settings */
 $('#settingsBtn').onclick = () => {
-  $('#oddsKey').value = getSetting('ruwt.oddsKey','');
+  $('#feedStatus').innerHTML = Object.entries(state.feeds)
+    .map(([k,v]) => `${esc(k)}: ${esc(v)}`).join('<br>') || '—';
   $('#settings').showModal();
 };
 $('#settingsCancel').onclick = () => $('#settings').close();
 $('#settingsSave').onclick = () => {
-  setSetting('ruwt.oddsKey', $('#oddsKey').value.trim());
-  state.liveOddsAt = 0; $('#settings').close(); refresh();
+  $('#settings').close(); refresh();
 };
 $('#refreshBtn').onclick = () => refresh();
 $('#filtersBtn').onclick = () => $('#filterPanel').showModal();
