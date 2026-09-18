@@ -373,7 +373,7 @@ const SOURCES = [
 const state = {
   games: [], filters: loadJSON('ruwt.filters', {day:'today', status:'all', sport:'all', sort:'rating', show:'all'}),
   lastOk: null, error: null, prevScores: new Map(), oddsCache: loadJSON('ruwt.odds', {}),
-  timer: null, loading: false, feeds: {},
+  timer: null, loading: false, feeds: {}, oddsFetched: {},
 };
 function loadJSON(k, d){ try{ const v = localStorage.getItem(k); return v ? {...d, ...JSON.parse(v)} : d; }catch{ return d; } }
 function saveJSON(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
@@ -427,6 +427,69 @@ async function fetchLeague(L){
   return ok.flatMap(parse).filter(g => seen.has(g.id) ? false : seen.add(g.id));
 }
 
+// ESPN's per-tour golf scoreboard often omits holes played. The general golf
+// leaderboard endpoint carries it, so live events get a second lookup keyed by name.
+async function enrichGolf(games){
+  const live = games.filter(g => g.isEvent && g.state === 'in');
+  if(!live.length) return;
+  const tries = [
+    'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard',
+    'https://site.web.api.espn.com/apis/site/v2/sports/golf/leaderboard',
+  ];
+  for(const url of tries){
+    try{
+      const data = await getJSON(url);
+      const evs = data.events || data.leaderboard || [];
+      let hits = 0;
+      for(const g of live){
+        const ev = evs.find(e => (e.name || e.shortName || '').toLowerCase() === g.name.toLowerCase());
+        const comp = ev?.competitions?.[0] || ev;
+        const players = (comp?.competitors || []).slice()
+          .sort((a,b) => (a.sortOrder ?? a.order ?? 999) - (b.sortOrder ?? b.order ?? 999));
+        if(!players.length) continue;
+        g.board = players.slice(0,4).map((pl,i) => ({
+          pos:  pl.status?.position?.displayName || pl.status?.position?.id || String(i+1),
+          name: pl.athlete?.shortName || pl.athlete?.displayName || '',
+          score: String(pl.score?.displayValue ?? pl.score ?? ''),
+          thru: golfThru(pl),
+        })).filter(x => x.name);
+        if(g.board.some(x => x.thru)) hits++;
+      }
+      state.feeds['golf detail'] = hits ? `holes from ${new URL(url).host}` : 'no holes in leaderboard feed';
+      if(hits) return;
+    }catch(err){ state.feeds['golf detail'] = `failed: ${String(err.message).slice(0,30)}`; }
+  }
+}
+
+// ESPN's core API carries full pregame prices — spread juice, moneylines, total juice —
+// that the scoreboard summary leaves out. One call per game, cached, top games only.
+const CORE_PATHS = {nfl:['football','nfl'], ncaaf:['football','college-football'], mlb:['baseball','mlb'],
+  nhl:['hockey','nhl'], ncaab:['basketball','mens-college-basketball'], nba:['basketball','nba']};
+async function enrichOdds(games){
+  const stale = id => !state.oddsFetched[id] || Date.now() - state.oddsFetched[id] > 20*60000;
+  const need = games.filter(g => g.state === 'pre' && CORE_PATHS[g.league.key] && stale(g.id)
+                 && (!g.odds || g.odds.spreadOdds?.home == null || g.odds.total == null)).slice(0, 14);
+  if(!need.length) return;
+  let filled = 0;
+  await Promise.allSettled(need.map(async g => {
+    const [sport, lg] = CORE_PATHS[g.league.key];
+    const id = g.id.split(':')[1];
+    const url = `https://sports.core.api.espn.com/v2/sports/${sport}/leagues/${lg}/events/${id}/competitions/${id}/odds`;
+    const d = await getJSON(url, 9000);
+    state.oddsFetched[g.id] = Date.now();
+    const items = d.items || [];
+    const pick = items.find(x => /espn bet|draftkings|consensus|caesars/i.test(x.provider?.name || '')) || items[0];
+    if(!pick) return;
+    const merged = parseOdds({odds:[pick]});
+    if(merged){
+      g.odds = {...(g.odds || {}), ...Object.fromEntries(Object.entries(merged).filter(([,v]) => v != null))};
+      state.oddsCache[g.id] = {...g.odds, at: Date.now()};
+      filled++;
+    }
+  }));
+  state.feeds['odds detail'] = `${filled}/${need.length} games priced`;
+}
+
 async function refresh(){
   if(state.loading) return;
   state.loading = true; setPulse('busy', 'Updating…');
@@ -453,6 +516,7 @@ async function refresh(){
   }
   state.error = failed.length ? failed : null;
   showNotice('');
+  await Promise.allSettled([enrichGolf(games), enrichOdds(games)]);
   state.mlbRace = mlbRace(games);
   games.forEach(scoreGame);
   state.games = games;
