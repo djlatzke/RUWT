@@ -65,6 +65,7 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
 @keyframes blink{50%{opacity:.25}}
 
 /* Game rows — desktop grid */
+.hdr{display:contents}
 .game{display:grid;align-items:center;column-gap:12px;
   grid-template-columns:6px 44px 40px 92px minmax(190px,1.4fr) 92px 112px 196px;
   grid-template-areas:"strip sport rate time teams box chan odds";
@@ -89,8 +90,9 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
 .time .st.live{color:#c62828}
 .team{display:flex;align-items:center;gap:7px;min-width:0}
 .team .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.team .rk{font-size:11px;color:var(--muted);margin-right:2px}
-.team .rec{font-size:11px;color:var(--muted);margin-left:4px}
+.tline .rk{font-size:11px;font-weight:600;color:var(--muted);margin-right:4px;vertical-align:1px}
+.tline .rec{font-size:11px;font-weight:400;color:var(--muted);margin-left:6px;letter-spacing:.2px}
+.tline .nm{font-weight:500}
 .team.win .nm{font-weight:bold}
 .logo{width:28px;height:28px;object-fit:contain;flex:none}
 .tchip{flex:none;min-width:34px;height:24px;border-radius:5px;color:#fff;font:700 11px/20px 'Inter',sans-serif;text-align:center;padding:0 4px;border-bottom:3px solid transparent}
@@ -160,26 +162,36 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   body{font-size:15px}
   .brand{font-size:22px}
   main{padding:10px 10px 90px}
-  .game{grid-template-columns:40px 40px 1fr auto;
+  .game{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);
     grid-template-areas:
-      "rate sport time chan"
-      "teams teams teams teams"
-      "odds odds odds odds";
-    grid-template-rows:30px 64px 58px;
-    row-gap:2px;height:auto;border:1px solid var(--line);border-left:6px solid var(--sc,#999);border-radius:10px;padding:10px 12px;margin:8px 0}
+      "head head"
+      "teams odds";
+    grid-template-rows:auto auto;
+    column-gap:8px;row-gap:6px;height:auto;border:1px solid var(--line);border-left:6px solid var(--sc,#999);border-radius:10px;padding:9px 11px;margin:8px 0}
+  .hdr{display:flex;grid-area:head;align-items:center;gap:9px;min-width:0}
+  .hdr .chan{margin-left:auto}
+  .hdr .time{flex:1;min-width:0}
+  .teams{grid-area:teams}
+  .odds{grid-area:odds;align-content:start}
+  .ocell{min-height:24px;padding:1px 2px}
+  .ocell .ln{font-size:10px}
+  .ocell .pr{font-size:11px}
   .strip{display:none}
   .sbadge{justify-self:start;padding:2px 7px}
   .time{display:flex;gap:8px;align-items:center;font-size:14px}
   .time .st{display:inline}
   .box{display:none}
-  .tline{height:30px}
-  .tline .nm{font-size:16px}
+  .tline{height:28px;gap:6px}
+  .tline .nm{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tline .sc{font-size:16px}
+  .logo,.tchip{width:24px;height:24px}
   .chan{justify-content:flex-end;align-self:center}
   .odds{text-align:left;white-space:normal}
   .odds br{display:none}
   .odds > span{margin-right:14px}
-  .sbadge{justify-content:flex-start}
+  .sbadge{justify-content:flex-start;height:24px;width:32px;flex:none}
   .llogo{max-height:22px}
+  .rbox{width:34px;height:28px;flex:none}
 }
 @media (prefers-reduced-motion:reduce){
   .livedot,.score.bump,.skeleton{animation:none}
@@ -199,9 +211,12 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
       </svg>
       <span id="appName">RUWT</span> <small id="today"></small></h1>
     <div class="pulse" id="pulse" role="status" aria-live="polite"><span class="dot"></span><span id="pulseText">Loading…</span></div>
-    <button class="iconbtn" id="filtersBtn" type="button">Filters</button>
-  <button class="iconbtn" id="refreshBtn" type="button">Refresh</button>
-    <button class="iconbtn" id="settingsBtn" type="button">Settings</button>
+<button class="iconbtn ico" id="refreshBtn" type="button" title="Refresh" aria-label="Refresh">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="iconbtn ico" id="settingsBtn" type="button" title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="2.1"/><path d="M19.2 13.6a7.6 7.6 0 0 0 0-3.2l2-1.5-2-3.4-2.4 1a7.6 7.6 0 0 0-2.8-1.6L13.6 2h-3.2l-.4 2.9a7.6 7.6 0 0 0-2.8 1.6l-2.4-1-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3.2l-2 1.5 2 3.4 2.4-1a7.6 7.6 0 0 0 2.8 1.6l.4 2.9h3.2l.4-2.9a7.6 7.6 0 0 0 2.8-1.6l2.4 1 2-3.4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+    </button>
   </div>
 </header>
 
@@ -305,8 +320,6 @@ const sqLogo = (bg, text, size) => 'data:image/svg+xml,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="13" fill="${bg}"/>` +
   `<text x="32" y="${38 + (size > 15 ? 2 : 0)}" font-family="Helvetica,Arial,sans-serif" font-size="${size}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text></svg>`);
 const ESPN_PLUS = sqLogo('#c8102e', 'ESPN+', 14);
-const BTN_PLUS  = sqLogo('#0088ce', 'B1G+', 16);
-const MLBTV_SQ  = sqLogo('#041E42', 'MLB.TV', 12);
 
 const LOGO1 = d => `https://www.google.com/s2/favicons?sz=64&domain=${d}`;
 const LOGO2 = d => `https://icons.duckduckgo.com/ip3/${d}.ico`;
@@ -315,7 +328,7 @@ const LOGO2 = d => `https://icons.duckduckgo.com/ip3/${d}.ico`;
 // Each entry: regex on ESPN broadcast name → how Dan watches it.
 const SOURCES = [
   [/^espn ?unl|^espn\+|^espn app|nhl power play/i, {label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, stream:true}],
-  [/b1g\+|btn\+|big ?ten\+/i,  {label:'BTN+', bg:'#0088ce', svc:'BTN+', img:BTN_PLUS, stream:true}],
+  [/b1g\+|btn\+|big ?ten\+/i,  {label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', stream:true}],
   [/fox ?one/i,              {label:'FOX One', bg:'#003a70', dom:'fox.com', stream:true, notMine:true}],
   [/^espn2$/i,               {label:'ESPN2', ch:209, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
   [/^espnu$/i,               {label:'ESPNU', ch:208, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
@@ -348,7 +361,7 @@ const SOURCES = [
   [/hbo|^max$/i,             {label:'HBO Max', bg:'#002be7', svc:'HBO Max', dom:'max.com'}],
   [/disney/i,                {label:'Disney+', bg:'#113ccf', svc:'Disney+', dom:'disneyplus.com'}],
   [/hulu/i,                  {label:'Hulu', bg:'#1ce783', svc:'Hulu', dark:true, dom:'hulu.com'}],
-  [/mlb\.?tv/i,              {label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', mlbtv:true, img:MLBTV_SQ}],
+  [/mlb\.?tv/i,              {label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', mlbtv:true, dom:'mlb.com'}],
   [/tubi/i,                  {label:'Tubi', bg:'#7408ff', svc:'free', dom:'tubitv.com'}],
   [/victory/i,               {label:'Victory+', bg:'#333', svc:'free', dom:'victoryplus.com'}],
 ];
@@ -651,9 +664,9 @@ function resolveWatch(g){
 
   // League fallbacks when the feed only lists regional networks
   if(!usable.length){
-    if(L === 'mlb') usable = [{label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', img:MLBTV_SQ, mlbtv:true}];
+    if(L === 'mlb') usable = [{label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', dom:'mlb.com', mlbtv:true}];
     else if(L === 'nhl' && !teams.includes('CAR')) usable = [{label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, guess:true}];
-    else if(L === 'wvb') usable = [{label:'BTN+', bg:'#0088ce', svc:'BTN+', img:BTN_PLUS, guess:true}];
+    else if(L === 'wvb') usable = [{label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', guess:true}];
     else if(L === 'chky') usable = [{label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, guess:true}];
     else if(L === 'wbc') usable = [{label:'Netflix', bg:'#e50914', svc:'Netflix', guess:true, dom:'netflix.com'}];
     else if(g.league.tennis && found.length === 0) usable = [{label:'Tennis Ch', ch:217, bg:'#2e7d32', guess:true, dom:'tennischannel.com'}];
@@ -890,7 +903,7 @@ function markHTML(p){
   const title = p.label + (p.ch ? ` · DTV ${p.ch}` : '') + (p.blackout ? ' · blackout, VPN via ESPN' : '');
   const pill = `<span class="pill" style="background:${esc(p.bg||'#333')};${p.dark?'color:#111':''}">${esc(p.label)}</span>`;
   const src = p.img || (p.dom ? LOGO1(p.dom) : p.logo || '');
-  const alt = p.img ? '' : (p.dom ? LOGO2(p.dom) : '');
+  const alt = p.img ? '' : p.alt2 ? LOGO1(p.alt2) : (p.dom ? LOGO2(p.dom) : '');
   const img = src
     ? `<img class="netlogo" src="${esc(src)}" alt="${esc(p.label)}" loading="lazy" data-alt="${esc(alt)}" data-chip="${esc(pill)}">`
     : pill;
@@ -947,12 +960,12 @@ function gameHTML(g){
       ${rows ? `<ol class="board">${rows}</ol>` : `<div class="board empty2">Leaderboard posts once play begins${g.state === 'pre' ? ` · ${esc(fmtDay.format(g.start))} ${esc(fmtTime.format(g.start))}` : ''}</div>`}
     </article>`;
   }
-  const inner = `<span class="strip" style="background:${L.color}"></span>${sb}${rate}
-      <div class="time">${statusHTML(g)}</div>
+  const inner = `<span class="strip" style="background:${L.color}"></span>
+      <div class="hdr">${sb}${rate}<div class="time">${statusHTML(g)}</div>${chanHTML(g)}</div>
       <div class="teams" data-score="${esc(g.away.score + '-' + g.home.score + '-' + g.away.sets + g.home.sets)}">
         ${sideHTML(g, g.away)}${sideHTML(g, g.home)}
       </div>
-      ${boxHTML(g)}${chanHTML(g)}${oddsHTML(g)}`;
+      ${boxHTML(g)}${oddsHTML(g)}`;
   return `<article class="game" ${common}>${inner}</article>`;
 }
 
