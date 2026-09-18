@@ -203,6 +203,15 @@ const FAVORITES = {
   chky:  { WIS: {min:78, mark:'⭐'} },
 };
 
+// Tennis tiers. Anything not matched here never reaches the board — that filters out
+// challengers, ITF events and qualifying draws. tier 3 needs a seeded player to show.
+const TENNIS_TIERS = [
+  {tier:1, bonus:30, re:/australian open|roland garros|french open|wimbledon|^us open|us open tennis/i},
+  {tier:2, bonus:20, re:/indian wells|bnp paribas|miami open|monte-?carlo|mutua madrid|madrid open|internazionali|italian open|national bank open|canadian open|rogers cup|cincinnati|western & southern|shanghai|rolex paris|paris masters|nitto atp|atp finals|wta finals|laver cup|davis cup|billie jean king cup|united cup|china open|beijing|wuhan open|dubai duty free|qatar open|charleston|credit one|winston-salem/i},
+  {tier:3, bonus:8,  re:/queen's|halle|terra wortmann|barcelona open|rio open|acapulco|abierto mexicano|vienna|erste bank|basel|swiss indoors|toray|japan open|tokyo|hamburg|citi open|washington open|eastbourne|stuttgart|adelaide international|brisbane international|auckland|guadalajara open/i},
+];
+function tennisTier(name){ return TENNIS_TIERS.find(t => t.re.test(name || '')) || null; }
+
 // Charlotte-proximity ACC schools — secondary to the Big Ten, per your rules.
 const LOCAL_COLLEGE = ['DUKE','UNC','NCST'];
 
@@ -216,8 +225,8 @@ const MANUAL_EVENTS = [];
 // months = [first, last] in season, 1-12, wrapping across New Year. Out-of-season
 // leagues aren't polled, which keeps the 30-second refresh light.
 const LEAGUES = [
-  {key:'nfl',   label:'NFL',    path:'football/nfl',                      color:'#013369', base:62, months:[8,2]},
-  {key:'ncaaf', label:'CFB',    path:'football/college-football',         color:'#7a1f1f', base:44, college:true, qs:'groups=80', months:[8,1]},
+  {key:'nfl',   label:'NFL',    path:'football/nfl',                      color:'#013369', base:62, months:[8,2], weekly:true},
+  {key:'ncaaf', label:'CFB',    path:'football/college-football',         color:'#7a1f1f', base:44, college:true, qs:'groups=80', months:[8,1], weekly:true},
   {key:'mlb',   label:'MLB',    path:'baseball/mlb',                      color:'#041E42', base:42, months:[2,11]},
   {key:'wbc',   label:'WBC',    path:'baseball/world-baseball-classic',   color:'#1a4d9e', base:62, months:[2,3]},
   {key:'nhl',   label:'NHL',    path:'hockey/nhl',                        color:'#3a3d42', base:48, months:[9,6]},
@@ -312,15 +321,22 @@ async function getJSON(url, ms=12000){
 }
 
 async function fetchLeague(L){
-  const now = new Date();
-  const range = `${ymd(shiftDay(now,-1))}-${ymd(shiftDay(now,1))}`;
   const base = `https://site.api.espn.com/apis/site/v2/sports/${L.path}/scoreboard`;
-  const params = [];
-  if(!L.event && !L.tennis) params.push('dates=' + range, 'limit=400');
-  if(L.qs) params.push(L.qs);
-  const url = base + (params.length ? '?' + params.join('&') : '');
-  const data = await getJSON(url);
-  return (data.events || []).flatMap(ev => normalizeEvent(L, ev)).filter(Boolean);
+  const q = L.qs ? '?' + L.qs : '';
+  const parse = data => (data.events || []).flatMap(ev => normalizeEvent(L, ev)).filter(Boolean);
+
+  // Football, golf and tennis have no usable date parameter: their default view is
+  // the current week / current tournaments, which is what we want anyway.
+  if(L.weekly || L.event || L.tennis) return parse(await getJSON(base + q));
+
+  // Everything else: one request per day. A date RANGE is rejected by these endpoints.
+  const now = new Date();
+  const days = [-1, 0, 1].map(n => ymd(shiftDay(now, n)));
+  const res = await Promise.allSettled(days.map(d => getJSON(base + (q ? q + '&' : '?') + 'dates=' + d)));
+  const ok = res.filter(r => r.status === 'fulfilled').map(r => r.value);
+  if(!ok.length) return parse(await getJSON(base + q));   // fall back to today's default view
+  const seen = new Set();
+  return ok.flatMap(parse).filter(g => seen.has(g.id) ? false : seen.add(g.id));
 }
 
 async function refresh(){
@@ -399,7 +415,7 @@ function sideFrom(L, comp){
     alt: t.alternateColor ? '#' + t.alternateColor : '#999',
     score: comp.score != null ? String(comp.score?.displayValue ?? comp.score) : '',
     sets: (comp.linescores||[]).map(l => l.displayValue ?? l.value).join(' '),
-    rank: rank && rank < 26 ? rank : null,
+    rank: rank && rank < 26 ? rank : null,   // college AP rank or tennis seed
     record: comp.records?.[0]?.summary || '',
     conf: t.conferenceId || comp.team?.conferenceId || null,
     winner: !!comp.winner,
@@ -549,9 +565,10 @@ function scoreGame(g){
   }
 
   if(L.tennis){
-    const t = g.tournament;
-    if(/australian open|roland garros|french open|wimbledon|us open/i.test(t)){ r += 25; why.push('Slam +25'); }
-    else if(/indian wells|bnp paribas|miami|cincinnati|western|winston|charleston|credit one/i.test(t)){ r += 18; why.push('priority event +18'); }
+    const tier = tennisTier(g.tournament);
+    if(tier){ r += tier.bonus; why.push(`${tier.tier === 1 ? 'Slam' : tier.tier === 2 ? 'top event' : 'tour event'} +${tier.bonus}`); }
+    const seeds = [g.home.rank, g.away.rank].filter(Boolean);
+    if(seeds.length){ const b = Math.round((10 - Math.min(...seeds)) / 2); if(b > 0){ r += b; why.push(`seed #${Math.min(...seeds)} +${b}`); } }
     if(/^final/i.test(g.round)){ r += 20; why.push('final +20'); }
     else if(/semi/i.test(g.round)){ r += 12; why.push('semi +12'); }
     else if(/quarter/i.test(g.round)){ r += 6; why.push('QF +6'); }
@@ -749,6 +766,7 @@ function visibleGames(){
   const tKey = dayKey(now), yKey = dayKey(shiftDay(now,-1));
   return state.games.filter(g => {
     if(g.league.watchableOnly && !g.watch.ok) return false;
+    if(g.league.tennis && !tennisRelevant(g)) return false;
     if(g.league.college && !collegeRelevant(g)) return false;
     if(f.sport !== 'all' && g.league.label !== f.sport) return false;
     if(f.show === 'watchable' && !g.watch.ok) return false;
@@ -762,6 +780,17 @@ function visibleGames(){
     return true;
   });
 }
+function tennisRelevant(g){
+  const tier = tennisTier(g.tournament);
+  if(!tier) return false;                                   // challenger / ITF / unknown event
+  if(/qualif/i.test(g.round || '')) return false;            // qualifying draws
+  const named = [g.home.name, g.away.name].every(n => n && !/^tbd$/i.test(n));
+  if(!named && tier.tier > 1) return false;                  // unfilled brackets below the Slams
+  const seeds = [g.home.rank, g.away.rank].filter(Boolean);
+  if(tier.tier === 3 && !seeds.some(s => s <= 8)) return false;
+  return true;
+}
+
 function collegeRelevant(g){
   if(g.league.key === 'chky') return true;   // Big Ten / NCHC / NCAA tournament all count
   if(hasFav(g) || g.home.rank || g.away.rank) return true;
