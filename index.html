@@ -97,11 +97,15 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
 .mscore{display:none}
 .chan{grid-area:chan;text-align:center;line-height:1.15}
 .pill{display:inline-block;border-radius:4px;padding:2px 7px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
-.chan .sub{display:block;font-size:11px;color:var(--muted);margin-top:1px}
-.chan img.netlogo{height:22px;width:22px;object-fit:contain;display:block;margin:0 auto 1px;border-radius:4px}
-.chan .nm2{display:block;font-size:11px;font-weight:600}
-.chan .alt{display:block;font-size:10px;color:var(--muted)}
-.chan.bad .pill{background:#fff!important;color:#c62828;border:1.5px dashed #c62828}
+
+.chan{display:flex;align-items:center;justify-content:center;gap:8px}
+.mk{position:relative;display:inline-flex;width:26px;height:26px;cursor:help}
+.chan img.netlogo{height:26px;width:26px;object-fit:contain;border-radius:5px}
+.mk .bdg{position:absolute;right:-5px;top:-5px;background:#111;color:#fff;font-size:10px;font-weight:700;line-height:14px;width:14px;height:14px;border-radius:50%;text-align:center}
+.mk .bdot{position:absolute;right:-3px;bottom:-3px;width:10px;height:10px;border-radius:50%;background:#000;border:1.5px solid #fff}
+.chan .pill{font-size:10px;padding:2px 5px}
+
+.chan.bad .pill{background:#fff!important;color:#c62828;border:1.5px dashed #c62828;font-weight:700;padding:3px 9px}
 .odds{grid-area:odds;font-size:11.5px;line-height:1.28;text-align:right;white-space:nowrap}
 .odds .none{color:#bbb}
 .odds .lbl{color:var(--muted)}
@@ -112,7 +116,7 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
 .gname span{display:block;font-weight:400;font-size:12px;color:var(--muted)}
 .golfcard .chan{width:116px;text-align:center}
 .board{list-style:none;margin:8px 0 0;padding:0 0 0 96px;display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:2px 24px}
-.board li{display:grid;grid-template-columns:28px 1fr 42px 30px;align-items:center;font-size:13px;height:24px;border-bottom:1px solid #f1f1f1}
+.board li{display:grid;grid-template-columns:28px 1fr 42px 58px;align-items:center;font-size:13px;height:24px;border-bottom:1px solid #f1f1f1}
 .board .p{color:var(--muted);font-size:12px}
 .board .s{text-align:right;font-weight:600}
 .board .t{text-align:right;color:var(--muted);font-size:11px}
@@ -150,24 +154,23 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   body{font-size:15px}
   .brand{font-size:22px}
   main{padding:10px 10px 90px}
-  .game{grid-template-columns:40px 1fr auto;
+  .game{grid-template-columns:40px 40px 1fr auto;
     grid-template-areas:
-      "rate sport chan"
-      "rate time  chan"
-      "away away  away"
-      "home home  home"
-      "odds odds  odds";
-    grid-template-rows:26px 20px 34px 34px 18px;
+      "rate sport time chan"
+      "away away away away"
+      "home home home home"
+      "odds odds odds odds";
+    grid-template-rows:30px 34px 34px 18px;
     row-gap:2px;height:auto;border:1px solid var(--line);border-left:6px solid var(--sc,#999);border-radius:10px;padding:10px 12px;margin:8px 0}
   .strip{display:none}
   .sbadge{justify-self:start;padding:2px 7px}
-  .time{display:flex;gap:8px;align-items:baseline}
+  .time{display:flex;gap:8px;align-items:center;font-size:14px}
   .time .st{display:inline}
   .score{display:none}
   .mscore{display:block;margin-left:auto;font-weight:bold;font-size:18px;padding-left:8px}
   .team{padding:2px 0}
   .team .nm{font-size:16px}
-  .chan{text-align:right;align-self:start}
+  .chan{justify-content:flex-end;align-self:center}
   .odds{text-align:left;white-space:normal}
   .odds br{display:none}
   .odds > span{margin-right:14px}
@@ -243,6 +246,7 @@ const FAVORITES = {
   ncaab: { WIS: {min:80, mark:'⭐'}, ILL: {bonus:12, mark:'✨'} },
   ncaaf: { WIS: {min:80, mark:'⭐'}, ILL: {bonus:12, mark:'✨'} },
   chky:  { WIS: {min:78, mark:'⭐'} },
+  wvb:   { WIS: {min:78, mark:'⭐'} },
 };
 
 // Tennis tiers. Anything not matched here never reaches the board — that filters out
@@ -278,7 +282,12 @@ const LEAGUES = [
   {key:'chky',  label:'CHKY',   path:'hockey/mens-college-hockey',        color:'#1d3557', base:42, college:true, months:[10,4]},
   {key:'ncaab', label:'CBB',    path:'basketball/mens-college-basketball',color:'#c45a10', base:40, college:true, qs:'groups=50', months:[11,4]},
   {key:'nba',   label:'NBA',    path:'basketball/nba',                    color:'#1d428a', base:34, watchableOnly:true, months:[10,6]},
-  {key:'golf',  label:'GOLF',   path:'golf/pga',                          color:'#7ec87a', base:55, event:true, darkText:true},
+  {key:'wvb',   label:'VB',     path:'volleyball/womens-college-volleyball', color:'#c5050c', base:50, months:[8,12]},
+  {key:'golf',  label:'PGA',    path:'golf/pga',                          color:'#7ec87a', base:55, event:true, darkText:true},
+  {key:'eur',   label:'DPWT',   path:'golf/eur',                          color:'#0b5394', base:46, event:true},
+  {key:'lpga',  label:'LPGA',   path:'golf/lpga',                         color:'#b5179e', base:44, event:true},
+  // Slug I'm less sure of — marked optional so a 404 doesn't show as a broken feed.
+  {key:'champ', label:'CHAMPS', path:'golf/champions-tour',               color:'#6b705c', base:38, event:true, optional:true},
   {key:'atp',   label:'TENNIS', path:'tennis/atp',                        color:'#f5d800', base:42, tennis:true, darkText:true},
   {key:'wta',   label:'TENNIS', path:'tennis/wta',                        color:'#f5d800', base:40, tennis:true, darkText:true},
 ];
@@ -297,7 +306,9 @@ const LOGO2 = d => `https://icons.duckduckgo.com/ip3/${d}.ico`;
 // DirecTV Stream MySports channels (Charlotte). ch = guide number. dom = logo lookup.
 // Each entry: regex on ESPN broadcast name → how Dan watches it.
 const SOURCES = [
-  [/^espn ?unl|^espn\+|^espn app|nhl power play/i, {label:'ESPN app', bg:'#c8102e', svc:'ESPN Unlimited', dom:'espn.com'}],
+  [/^espn ?unl|^espn\+|^espn app|nhl power play/i, {label:'ESPN Unlimited', bg:'#c8102e', svc:'ESPN Unlimited', dom:'espn.com', badge:'plus', stream:true}],
+  [/b1g\+|btn\+|big ?ten\+/i,  {label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', badge:'plus', stream:true, notMine:true}],
+  [/fox ?one/i,              {label:'FOX One', bg:'#003a70', dom:'fox.com', badge:'plus', stream:true, notMine:true}],
   [/^espn2$/i,               {label:'ESPN2', ch:209, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
   [/^espnu$/i,               {label:'ESPNU', ch:208, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
   [/^espnews$/i,             {label:'ESPNEWS', ch:207, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
@@ -400,7 +411,10 @@ async function refresh(){
   const active = LEAGUES.filter(inSeason);
   const results = await Promise.allSettled(active.map(fetchLeague));
   const games = manualGames(); const failed = [];
-  results.forEach((r,i) => r.status === 'fulfilled' ? games.push(...r.value) : failed.push(active[i].key));
+  results.forEach((r,i) => {
+    if(r.status === 'fulfilled') games.push(...r.value);
+    else if(!active[i].optional) failed.push(active[i].key);
+  });
   state.loading = false;
   if(failed.length === active.length){
     state.error = 'all';
@@ -517,23 +531,25 @@ function normalizeGolf(L, ev){
   const c = (ev.competitions||[])[0] || {};
   const st = statusOf(c.status ? c : ev);
   const players = (c.competitors||[]).slice().sort((a,b) => (a.sortOrder ?? a.order ?? 999) - (b.sortOrder ?? b.order ?? 999));
-  const board = players.slice(0,5).map((pl,i) => ({
+  const name = ev.name || ev.shortName || L.label;
+  const isCup = /ryder cup|presidents cup|solheim cup|walker cup|curtis cup|junior ryder cup/i.test(name);
+  const board = (isCup ? players.slice(0,2) : players.slice(0,4)).map((pl,i) => ({
     pos:  pl.status?.position?.displayName || pl.status?.position?.id || String(i+1),
-    name: pl.athlete?.shortName || pl.athlete?.displayName || '',
+    name: pl.team?.displayName || pl.team?.shortDisplayName || pl.athlete?.shortName || pl.athlete?.displayName || '',
     score: String(pl.score?.displayValue ?? pl.score ?? ''),
-    thru: pl.status?.thru != null ? (pl.status.thru === 18 ? 'F' : String(pl.status.thru))
-         : (pl.status?.teeTime ? fmtTime.format(new Date(pl.status.teeTime)) : ''),
+    thru: pl.status?.thru != null ? (pl.status.thru >= 18 ? 'F' : `${pl.status.thru}`)
+         : (pl.status?.hole != null ? `${Math.max(0, pl.status.hole - 1)}`
+         : (pl.status?.teeTime ? fmtTime.format(new Date(pl.status.teeTime)) : '')),
   })).filter(x => x.name);
   const lead = players[0];
   const leadName = lead?.athlete?.shortName || lead?.athlete?.displayName || '';
   const leadScore = lead?.score?.displayValue ?? lead?.score ?? '';
-  const name = ev.name || ev.shortName || 'PGA Tour';
   return {
     id: `golf:${ev.id}`, league: L, isEvent: true,
     start: new Date(ev.date), end: ev.endDate ? new Date(ev.endDate) : null,
     state: st.state, detail: st.detail, completed: st.completed,
-    name, board, lead: leadName ? `${leadName} ${leadScore}` : '',
-    major: /masters|pga championship|u\.?s\.? open|open championship|the open|players championship|tour championship|ryder cup/i.test(name),
+    name, board, cup: isCup, lead: leadName ? `${leadName} ${leadScore}` : '',
+    major: /masters|pga championship|u\.?s\.? open|open championship|the open|players championship|tour championship|ryder cup|solheim cup|presidents cup|chevron championship|evian|women's open|women's pga|race to dubai|dp world tour championship/i.test(name),
     venue: c.venue?.fullName || ev.venues?.[0]?.fullName || '',
     broadcasts: broadcastNames(c, ev),
     home: {}, away: {},
@@ -581,7 +597,7 @@ const MLB_BLACKOUT = ['ATL','CIN','WSH','BAL'];
 function blackoutList(){ return MLB_BLACKOUT; }
 
 function resolveWatch(g){
-  const found = [];
+  let found = [];
   for(const b of g.broadcasts){
     const hit = SOURCES.find(([re]) => re.test(b.name.trim()));
     if(hit) found.push({...hit[1], raw:b.name, market:b.market, logo:b.logo || hit[1].logo || ''});
@@ -591,28 +607,50 @@ function resolveWatch(g){
   const teams = [g.home?.abbr, g.away?.abbr].filter(Boolean);
   const blacked = L === 'mlb' && teams.some(t => blackoutList().includes(t));
 
-  // Usable = DTV channel or a service Dan has. Regional names are unknown → not usable.
-  let usable = found.filter(f => !f.unknown && !(f.mlbtv && blacked));
+  // FOX One is the streaming-only simulcast: if plain FOX is also listed, it's noise.
+  if(found.some(f => /^fox$/i.test(f.label)) ) found = found.filter(f => f.label !== 'FOX One');
+
+  // Usable = a DTV channel or a service Dan actually has.
+  let usable = found.filter(f => !f.unknown && !f.notMine);
 
   // League fallbacks when the feed only lists regional networks
   if(!usable.length){
-    if(L === 'mlb' && !blacked) usable = [{label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', dom:'mlb.com'}];
+    if(L === 'mlb') usable = [{label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', dom:'mlb.com', mlbtv:true}];
     else if(L === 'nhl' && !teams.includes('CAR')) usable = [{label:'ESPN app', bg:'#c8102e', svc:'ESPN Unlimited', guess:true, dom:'espn.com'}];
+    else if(L === 'wvb') usable = [{label:'BTN', ch:610, bg:'#0088ce', dom:'bigten.org', guess:true}];
     else if(L === 'chky') usable = [{label:'ESPN app', bg:'#c8102e', svc:'ESPN Unlimited', guess:true, dom:'espn.com'}];
     else if(L === 'wbc') usable = [{label:'Netflix', bg:'#e50914', svc:'Netflix', guess:true, dom:'netflix.com'}];
     else if(g.league.tennis && found.length === 0) usable = [{label:'Tennis Ch', ch:217, bg:'#2e7d32', guess:true, dom:'tennischannel.com'}];
-    else if(g.league.event && found.length === 0) usable = [{label:'Golf', ch:218, bg:'#1b5e20', also:'Peacock', guess:true, dom:'golfchannel.com'}];
+    else if(g.league.event && found.length === 0) usable = [{label:'Golf', ch:218, bg:'#1b5e20', guess:true, dom:'golfchannel.com'}];
   }
-  const dtv = usable.filter(u => u.ch).sort((a,b) => (a.market==='national'?0:1) - (b.market==='national'?0:1));
-  const stream = usable.filter(u => !u.ch);
-  const primary = dtv[0] || stream[0] || null;
-  const alts = [...new Set([primary?.also, ...usable.filter(u => u !== primary).map(u => u.label)].filter(Boolean))].slice(0,2);
-  const regional = found.filter(f => f.unknown).map(f => f.label);
+  const dtv = usable.filter(u => u.ch).sort((a,b) => (a.market === 'national' ? 0 : 1) - (b.market === 'national' ? 0 : 1));
+  const streams = usable.filter(u => !u.ch)
+    .sort((a,b) => (b.svc === 'ESPN Unlimited') - (a.svc === 'ESPN Unlimited'));
+
+  // DTV leads by default. Exception: a live event whose linear window hasn't opened yet
+  // (early golf rounds) leads with the stream that is actually carrying it right now.
+  let ranked = linearOnAir(g) ? [...dtv, ...streams] : [...streams, ...dtv];
+
+  // A blacked-out MLB.TV game still shows the mark, flagged with a dot.
+  if(blacked) ranked = ranked.map(u => u.mlbtv ? {...u, badge:'dot', blackout:true} : u);
+
+  const show = ranked.slice(0,2);
+  const primary = show[0] || null;
+  const regional = found.filter(f => f.unknown || f.notMine).map(f => f.label);
   return {
-    primary, alts, ok: !!primary,
-    note: primary ? (primary.ch ? `DTV ${primary.ch}` : (primary.guess ? 'likely' : 'streaming'))
-                  : (blacked ? 'MLB.TV blackout' : regional[0] ? `${regional[0]}, not in your lineup` : 'no listing'),
+    primary, show, ok: !!primary,
+    note: primary ? (primary.ch ? `DTV ${primary.ch}` : (primary.blackout ? 'blackout — VPN via ESPN' : 'streaming'))
+                  : (regional[0] ? `${regional[0]}, not in your lineup` : 'no listing'),
   };
+}
+
+// Early golf rounds stream before the TV window opens; weekend coverage starts earlier.
+function linearOnAir(g){
+  if(!g.isEvent || g.state !== 'in') return true;
+  const parts = new Intl.DateTimeFormat('en-US',{timeZone:TZ, hour:'numeric', hour12:false, weekday:'short'}).formatToParts(new Date());
+  const hour = Number(parts.find(x => x.type === 'hour')?.value ?? 12);
+  const wd = parts.find(x => x.type === 'weekday')?.value || '';
+  return hour >= ((wd === 'Sat' || wd === 'Sun') ? 13 : 15);
 }
 
 /* =====================================================================
@@ -655,7 +693,8 @@ function scoreGame(g){
 
   if(g.isEvent){
     if(g.manualRating){ g.watch = resolveWatch(g); g.rating = g.manualRating; g.why = 'set by hand'; return; }
-    if(g.major){ r += 28; why.push('major +28'); }
+    if(g.cup){ r = Math.max(r + 35, 84); why.push('team cup, floor 84'); }
+    else if(g.major){ r += 28; why.push('major +28'); }
     if(g.state === 'in'){ r += 8; why.push('live +8'); }
     if(/final round|round 4|rd 4/i.test(g.detail)){ r += 8; why.push('final round +8'); }
     return finish(g, r, why);
@@ -740,7 +779,7 @@ function scoreGame(g){
   return finish(g, r, why);
 }
 function finish(g, r, why){
-  if(!g.watch.ok && !hasFav(g)){ r -= 15; why.push('not in your lineup −15'); }
+  if(!g.watch.ok && !hasFav(g) && !g.cup){ r -= 15; why.push('not in your lineup −15'); }
   g.rating = Math.max(1, Math.min(99, Math.round(r)));
   g.why = why.join(' · ');
 }
@@ -836,17 +875,22 @@ function statusHTML(g){
   return `<span class="st">${esc(when)}</span>${/postpon|delay|cancel/i.test(g.detail) ? `<span>${esc(g.detail)}</span>` : ''}`;
 }
 
-function chanHTML(g){
-  const w = g.watch;
-  if(!w.ok) return `<div class="chan bad"><span class="pill">Check</span><span class="sub">${esc(w.note)}</span></div>`;
-  const p = w.primary;
+function markHTML(p){
+  const title = p.label + (p.ch ? ` · DTV ${p.ch}` : '') + (p.blackout ? ' · blackout, VPN via ESPN' : '');
   const pill = `<span class="pill" style="background:${esc(p.bg||'#333')};${p.dark?'color:#111':''}">${esc(p.label)}</span>`;
   const src = p.logo || (p.dom ? LOGO1(p.dom) : '');
   const alt = p.dom ? LOGO2(p.dom) : '';
-  const mark = src
+  const img = src
     ? `<img class="netlogo" src="${esc(src)}" alt="${esc(p.label)}" loading="lazy" data-alt="${esc(alt)}" data-chip="${esc(pill)}">`
     : pill;
-  return `<div class="chan">${mark}<span class="nm2">${esc(p.label)}</span><span class="sub">${esc(w.note)}</span>${w.alts.length ? `<span class="alt">or ${esc(w.alts.join(', '))}</span>` : ''}</div>`;
+  const badge = p.badge === 'plus' ? '<span class="bdg">+</span>'
+              : p.badge === 'dot'  ? '<span class="bdot"></span>' : '';
+  return `<span class="mk" title="${esc(title)}">${img}${badge}</span>`;
+}
+function chanHTML(g){
+  const w = g.watch;
+  if(!w.ok) return `<div class="chan bad" title="${esc(w.note)}"><span class="pill">?</span></div>`;
+  return `<div class="chan">${(w.show || [w.primary]).map(markHTML).join('')}</div>`;
 }
 
 function oddsHTML(g){
@@ -855,7 +899,10 @@ function oddsHTML(g){
   const none = '<span class="none">—</span>';
   const favSide = pickFav(o.ml);
   const ml   = favSide ? `${esc(g[favSide].abbr)} ${esc(o.ml[favSide])}` : none;
-  const line = o.spread ? esc(o.spread) : none;
+  // Baseball's "line" is the run line: the moneyline favorite laying 1.5.
+  const line = o.spread ? esc(o.spread)
+    : (g.league.key === 'mlb' && favSide) ? `${esc(g[favSide].abbr)} −1.5`
+    : (g.league.key === 'nhl' && favSide) ? `${esc(g[favSide].abbr)} −1.5` : none;
   const ou   = o.total ? esc(o.total) : none;
   const tag = o.live ? '<span class="tag">LIVE</span>' : (o.stale && g.state !== 'pre') ? '<span class="tag">PRE</span>' : '';
   return `<div class="odds"><span><span class="lbl">ML</span> ${ml}</span><br>
@@ -878,7 +925,7 @@ function gameHTML(g){
   const rate = `<span class="rbox ${rClass(g.rating)}" title="${esc(g.why)}" aria-label="Rating ${g.rating}">${g.rating}</span>`;
   const common = `style="--sc:${L.color}" data-id="${esc(g.id)}"`;
   if(g.isEvent){
-    const rows = (g.board || []).map(p => `<li><span class="p">${esc(p.pos)}</span><span class="n">${esc(p.name)}</span><span class="s">${esc(p.score)}</span><span class="t">${esc(p.thru)}</span></li>`).join('');
+    const rows = (g.board || []).map(p => `<li><span class="p">${esc(p.pos)}</span><span class="n">${esc(p.name)}</span><span class="s">${esc(p.score)}</span><span class="t">${p.thru ? (/^\d+$|^F$/.test(p.thru) ? `thru ${esc(p.thru)}` : esc(p.thru)) : ''}</span></li>`).join('');
     return `<article class="game golfcard" ${common}>
       <div class="ghead">${sb}${rate}<div class="gname">${esc(g.name)}<span>${esc(g.detail || '')}</span></div>${chanHTML(g)}</div>
       ${rows ? `<ol class="board">${rows}</ol>` : `<div class="board empty2">Leaderboard posts once play begins${g.state === 'pre' ? ` · ${esc(fmtDay.format(g.start))} ${esc(fmtTime.format(g.start))}` : ''}</div>`}
@@ -902,6 +949,7 @@ function visibleGames(){
   return state.games.filter(g => {
     if(g.league.watchableOnly && !g.watch.ok) return false;
     if(g.league.tennis && !tennisRelevant(g)) return false;
+    if(g.league.key === 'wvb' && !hasFav(g)) return false;   // Wisconsin matches only
     if(g.league.college && !collegeRelevant(g)) return false;
     if(f.sport !== 'all' && g.league.label !== f.sport) return false;
     if(f.show === 'watchable' && !g.watch.ok) return false;
