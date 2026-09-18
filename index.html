@@ -67,14 +67,14 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
 /* Game rows — desktop grid */
 .hdr{display:contents}
 .game{display:grid;align-items:center;column-gap:12px;
-  grid-template-columns:6px 44px 40px 92px minmax(190px,1.4fr) 92px 112px 196px;
-  grid-template-areas:"strip sport rate time teams box chan odds";
+  grid-template-columns:6px 44px 40px 92px minmax(190px,1.4fr) 200px 104px;
+  grid-template-areas:"strip sport rate time teams odds chan";
   border-bottom:1px solid var(--line);padding:0;height:64px}
 .teams{grid-area:teams;display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0}
 .tline{display:flex;align-items:center;gap:7px;min-width:0;height:26px}
 .tline .sc{margin-left:auto;font-weight:700;font-size:16px;padding-left:10px}
 .tline.lose .nm,.tline.lose .sc{color:#888}
-.box{grid-area:box;display:grid;grid-template-columns:repeat(3,1fr);gap:0 4px;font-size:12px;text-align:center;line-height:1.25}
+.box{grid-area:odds;display:grid;grid-template-columns:repeat(3,1fr);gap:1px 4px;font-size:12.5px;text-align:center;line-height:1.3}
 .box .h{font-size:9px;color:var(--muted);letter-spacing:.7px}
 .box b{font-weight:600}
 .game:hover{background:#fafafa}
@@ -170,6 +170,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
     column-gap:8px;row-gap:6px;height:auto;border:1px solid var(--line);border-left:6px solid var(--sc,#999);border-radius:10px;padding:9px 11px;margin:8px 0}
   .hdr{display:flex;grid-area:head;align-items:center;gap:9px;min-width:0}
   .hdr .chan{margin-left:auto}
+  .box{font-size:12px}
   .hdr .time{flex:1;min-width:0}
   .teams{grid-area:teams}
   .odds{grid-area:odds;align-content:start}
@@ -180,7 +181,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   .sbadge{justify-self:start;padding:2px 7px}
   .time{display:flex;gap:8px;align-items:center;font-size:14px}
   .time .st{display:inline}
-  .box{display:none}
+  .box{display:grid}
   .tline{height:28px;gap:6px}
   .tline .nm{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .tline .sc{font-size:16px}
@@ -516,6 +517,7 @@ function sideFrom(L, comp){
     alt: t.alternateColor ? '#' + t.alternateColor : '#999',
     score: comp.score != null ? String(comp.score?.displayValue ?? comp.score) : '',
     sets: (comp.linescores||[]).map(l => l.displayValue ?? l.value).join(' '),
+    line: (comp.linescores||[]).map(l => l.displayValue ?? l.value),
     hits: comp.hits, errors: comp.errors,
     rank: rank && rank < 26 ? rank : null,   // college AP rank or tennis seed
     record: comp.records?.[0]?.summary || '',
@@ -566,6 +568,20 @@ function normalizeComp(L, ev, c){
   return g;
 }
 
+// ESPN reports holes played in several shapes depending on the tour and round state.
+function golfThru(pl){
+  const st = pl.status || {};
+  const n = [st.thru, pl.thru, st.holesPlayed, st.hole != null ? st.hole - 1 : null]
+    .find(v => typeof v === 'number' && v >= 0);
+  if(n != null) return n >= 18 ? 'F' : String(n);
+  const dv = st.displayValue || st.type?.shortDetail || '';
+  const m = /(\d{1,2})/.exec(dv);
+  if(/^f$|finish|complete/i.test(dv)) return 'F';
+  if(m) return m[1];
+  const tee = st.teeTime || pl.teeTime;
+  return tee ? fmtTime.format(new Date(tee)) : '';
+}
+
 function normalizeGolf(L, ev){
   const c = (ev.competitions||[])[0] || {};
   const st = statusOf(c.status ? c : ev);
@@ -576,9 +592,7 @@ function normalizeGolf(L, ev){
     pos:  pl.status?.position?.displayName || pl.status?.position?.id || String(i+1),
     name: pl.team?.displayName || pl.team?.shortDisplayName || pl.athlete?.shortName || pl.athlete?.displayName || '',
     score: String(pl.score?.displayValue ?? pl.score ?? ''),
-    thru: pl.status?.thru != null ? (pl.status.thru >= 18 ? 'F' : `${pl.status.thru}`)
-         : (pl.status?.hole != null ? `${Math.max(0, pl.status.hole - 1)}`
-         : (pl.status?.teeTime ? fmtTime.format(new Date(pl.status.teeTime)) : '')),
+    thru: golfThru(pl),
   })).filter(x => x.name);
   const lead = players[0];
   const leadName = lead?.athlete?.shortName || lead?.athlete?.displayName || '';
@@ -881,13 +895,31 @@ function sideHTML(g, s){
     ${score !== '' ? `<span class="sc">${esc(score)}</span>` : ''}</div>`;
 }
 
-// Baseball gets a line score once play starts; other sports keep the slot empty.
-function boxHTML(g){
-  if(g.league.key !== 'mlb' || g.state === 'pre') return '<div class="box"></div>';
-  const cell = t => `<b>${esc(t ?? '–')}</b>`;
-  return `<div class="box"><span class="h">R</span><span class="h">H</span><span class="h">E</span>
-    ${cell(g.away.score)}${cell(g.away.hits)}${cell(g.away.errors)}
-    ${cell(g.home.score)}${cell(g.home.hits)}${cell(g.home.errors)}</div>`;
+// Before first pitch the panel carries the odds; afterwards it carries the detail
+// that matters for that sport — R/H/E, sets, or the period-by-period line.
+function detailHTML(g){
+  if(g.state === 'pre') return oddsHTML(g);
+  const L = g.league.key;
+  const cell = t => `<b>${esc(t === '' || t == null ? '–' : t)}</b>`;
+  const head = t => `<span class="h">${esc(t)}</span>`;
+
+  if(L === 'mlb'){
+    return `<div class="box cols3">${head('R')}${head('H')}${head('E')}
+      ${cell(g.away.score)}${cell(g.away.hits)}${cell(g.away.errors)}
+      ${cell(g.home.score)}${cell(g.home.hits)}${cell(g.home.errors)}</div>`;
+  }
+
+  const aw = g.away.line || [], hm = g.home.line || [];
+  const n = Math.min(Math.max(aw.length, hm.length), 6);
+  if(!n) return '<div class="box"></div>';
+  const setSport = g.league.tennis || L === 'wvb';
+  const labels = Array.from({length:n}, (_,i) => setSport ? `S${i+1}` : String(i+1));
+  const total = setSport ? [] : [g.away.score, g.home.score];
+  const cols = n + (total.length ? 1 : 0);
+  return `<div class="box" style="grid-template-columns:repeat(${cols},1fr)">
+    ${labels.map(head).join('')}${total.length ? head('T') : ''}
+    ${Array.from({length:n}, (_,i) => cell(aw[i])).join('')}${total.length ? cell(total[0]) : ''}
+    ${Array.from({length:n}, (_,i) => cell(hm[i])).join('')}${total.length ? cell(total[1]) : ''}</div>`;
 }
 
 function statusHTML(g){
@@ -965,7 +997,7 @@ function gameHTML(g){
       <div class="teams" data-score="${esc(g.away.score + '-' + g.home.score + '-' + g.away.sets + g.home.sets)}">
         ${sideHTML(g, g.away)}${sideHTML(g, g.home)}
       </div>
-      ${boxHTML(g)}${oddsHTML(g)}`;
+      ${detailHTML(g)}`;
   return `<article class="game" ${common}>${inner}</article>`;
 }
 
