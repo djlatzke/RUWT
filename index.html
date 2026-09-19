@@ -39,7 +39,7 @@ a{color:inherit}
 .iconbtn{border:1.5px solid #000;background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
 .iconbtn:active{transform:translateY(1px)}
 
-main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
+main{max-width:1280px;margin:0 auto;padding:12px 16px 40px}
 
 /* Filter chips */
 .filterbar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 6px}
@@ -77,6 +77,12 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
 .box{grid-area:odds;display:grid;grid-template-columns:repeat(3,1fr);gap:1px 4px;font-size:12.5px;text-align:center;line-height:1.3}
 .box .h{font-size:9px;color:var(--muted);letter-spacing:.7px}
 .box b{font-weight:600}
+.box.periods b:not(.tot){color:#777;font-weight:500}
+.box .tot{font-weight:700;font-size:13.5px}
+.box .rule{border-left:1px solid var(--line);margin:1px auto;width:1px;height:100%}
+.box b.p{color:#666;font-weight:400}
+.box b.t{font-weight:700;font-size:13.5px}
+.box .rule{border-left:1px solid var(--line);margin:1px 5px;display:block;height:100%}
 .game:hover{background:#fafafa}
 .strip{grid-area:strip;align-self:stretch;border-radius:3px}
 .sbadge{grid-area:sport;display:flex;align-items:center;justify-content:center;height:30px}
@@ -142,10 +148,6 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 90px}
 .skeleton{height:52px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#fafafa,#f0f0f0,#fafafa);background-size:200% 100%;animation:sk 1.2s infinite}
 @keyframes sk{to{background-position:-200% 0}}
 
-/* On deck footer */
-.ondeck{position:fixed;left:0;right:0;bottom:0;background:#e6e6e6;border-top:2px solid #000;z-index:15;padding-bottom:env(safe-area-inset-bottom)}
-.ondeck-in{max-width:1280px;margin:0 auto;padding:8px 16px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
 /* Settings */
 dialog{border:2px solid #000;border-radius:10px;max-width:520px;width:calc(100% - 24px);padding:18px}
 dialog::backdrop{background:rgba(0,0,0,.35)}
@@ -161,7 +163,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 @media (max-width:720px){
   body{font-size:15px}
   .brand{font-size:22px}
-  main{padding:10px 10px 90px}
+  main{padding:10px 10px 30px}
   .game{grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);
     grid-template-areas:
       "head head"
@@ -227,7 +229,6 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   <div id="sections"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
 </main>
 
-<footer class="ondeck"><div class="ondeck-in" id="ondeck">On deck: loading…</div></footer>
 
 <dialog id="settings">
   <h2>Settings</h2>
@@ -320,7 +321,12 @@ const inSeason = L => {
 const sqLogo = (bg, text, size) => 'data:image/svg+xml,' + encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="13" fill="${bg}"/>` +
   `<text x="32" y="${38 + (size > 15 ? 2 : 0)}" font-family="Helvetica,Arial,sans-serif" font-size="${size}" font-weight="700" fill="#fff" text-anchor="middle">${text}</text></svg>`);
-const ESPN_PLUS = sqLogo('#c8102e', 'ESPN+', 14);
+const ESPN_PLUS  = sqLogo('#c8102e', 'ESPN+', 14);
+const ESPN_TILE  = sqLogo('#c8102e', 'ESPN', 15);
+const ESPN2_TILE = sqLogo('#c8102e', 'ESPN2', 13);
+const ESPNU_TILE = sqLogo('#c8102e', 'ESPNU', 13);
+const ESPNN_TILE = sqLogo('#c8102e', 'NEWS', 14);
+const MLBTV_SQ   = sqLogo('#041E42', 'MLB.TV', 12);
 
 const LOGO1 = d => `https://www.google.com/s2/favicons?sz=64&domain=${d}`;
 const LOGO2 = d => `https://icons.duckduckgo.com/ip3/${d}.ico`;
@@ -331,14 +337,14 @@ const SOURCES = [
   [/^espn ?unl|^espn\+|^espn app|nhl power play/i, {label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, stream:true}],
   [/b1g\+|btn\+|big ?ten\+/i,  {label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', stream:true}],
   [/fox ?one/i,              {label:'FOX One', bg:'#003a70', dom:'fox.com', stream:true, notMine:true}],
-  [/^espn2$/i,               {label:'ESPN2', ch:209, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
-  [/^espnu$/i,               {label:'ESPNU', ch:208, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
-  [/^espnews$/i,             {label:'ESPNEWS', ch:207, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
-  [/^espn$/i,                {label:'ESPN', ch:206, bg:'#c8102e', also:'ESPN app', dom:'espn.com'}],
+  [/^espn2$/i,               {label:'ESPN2', ch:209, bg:'#c8102e', img:ESPN2_TILE}],
+  [/^espnu$/i,               {label:'ESPNU', ch:208, bg:'#c8102e', img:ESPNU_TILE}],
+  [/^espnews$/i,             {label:'ESPNEWS', ch:207, bg:'#c8102e', img:ESPNN_TILE}],
+  [/^espn$/i,                {label:'ESPN', ch:206, bg:'#c8102e', img:ESPN_TILE}],
   [/^abc$/i,                 {label:'ABC', ch:9, bg:'#000', also:'ESPN app', dom:'abc.com'}],
   [/^cbs$/i,                 {label:'CBS', ch:3, bg:'#0033a0', dom:'cbs.com'}],
-  [/^nbc$/i,                 {label:'NBC', ch:6, bg:'#6c2dc7', also:'Peacock', dom:'nbc.com'}],
-  [/^fox$/i,                 {label:'FOX', ch:18, bg:'#003a70', dom:'fox.com'}],
+  [/^nbc$/i,                 {label:'NBC', ch:36, bg:'#6c2dc7', also:'Peacock', dom:'nbc.com'}],
+  [/^fox$/i,                 {label:'FOX', ch:46, bg:'#003a70', dom:'fox.com'}],
   [/sec ?net|^secn/i,        {label:'SECN', ch:611, bg:'#004b8d', also:'ESPN app', dom:'espn.com'}],
   [/^acc ?n|acc network/i,   {label:'ACCN', ch:612, bg:'#013ca6', also:'ESPN app', dom:'espn.com'}],
   [/big ?ten|^btn/i,         {label:'BTN', ch:610, bg:'#0088ce', dom:'bigten.org'}],
@@ -362,7 +368,7 @@ const SOURCES = [
   [/hbo|^max$/i,             {label:'HBO Max', bg:'#002be7', svc:'HBO Max', dom:'max.com'}],
   [/disney/i,                {label:'Disney+', bg:'#113ccf', svc:'Disney+', dom:'disneyplus.com'}],
   [/hulu/i,                  {label:'Hulu', bg:'#1ce783', svc:'Hulu', dark:true, dom:'hulu.com'}],
-  [/mlb\.?tv/i,              {label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', mlbtv:true, dom:'mlb.com'}],
+  [/mlb\.?tv/i,              {label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', mlbtv:true, img:MLBTV_SQ}],
   [/tubi/i,                  {label:'Tubi', bg:'#7408ff', svc:'free', dom:'tubitv.com'}],
   [/victory/i,               {label:'Victory+', bg:'#333', svc:'free', dom:'victoryplus.com'}],
 ];
@@ -373,7 +379,7 @@ const SOURCES = [
 const state = {
   games: [], filters: loadJSON('ruwt.filters', {day:'today', status:'all', sport:'all', sort:'rating', show:'all'}),
   lastOk: null, error: null, prevScores: new Map(), oddsCache: loadJSON('ruwt.odds', {}),
-  timer: null, loading: false, feeds: {}, oddsFetched: {},
+  timer: null, loading: false, feeds: {}, oddsFetched: {}, peakMargin: {},
 };
 function loadJSON(k, d){ try{ const v = localStorage.getItem(k); return v ? {...d, ...JSON.parse(v)} : d; }catch{ return d; } }
 function saveJSON(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
@@ -430,34 +436,33 @@ async function fetchLeague(L){
 // ESPN's per-tour golf scoreboard often omits holes played. The general golf
 // leaderboard endpoint carries it, so live events get a second lookup keyed by name.
 async function enrichGolf(games){
-  const live = games.filter(g => g.isEvent && g.state === 'in');
+  const live = games.filter(g => g.isEvent && g.state === 'in' && (g.board || []).length);
   if(!live.length) return;
   const tries = [
     'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard',
     'https://site.web.api.espn.com/apis/site/v2/sports/golf/leaderboard',
   ];
+  const key = n => (n || '').toLowerCase().replace(/[^a-z]/g,'');
   for(const url of tries){
     try{
       const data = await getJSON(url);
       const evs = data.events || data.leaderboard || [];
       let hits = 0;
       for(const g of live){
-        const ev = evs.find(e => (e.name || e.shortName || '').toLowerCase() === g.name.toLowerCase());
-        const comp = ev?.competitions?.[0] || ev;
-        const players = (comp?.competitors || []).slice()
-          .sort((a,b) => (a.sortOrder ?? a.order ?? 999) - (b.sortOrder ?? b.order ?? 999));
+        // Match on event id first; fall back to a loose name match.
+        const ev = evs.find(e => String(e.id) === String(g.eventId))
+                || evs.find(e => key(e.name || e.shortName).includes(key(g.name).slice(0,14)));
+        const players = (ev?.competitions?.[0] || ev)?.competitors || [];
         if(!players.length) continue;
-        g.board = players.slice(0,4).map((pl,i) => ({
-          pos:  pl.status?.position?.displayName || pl.status?.position?.id || String(i+1),
-          name: pl.athlete?.shortName || pl.athlete?.displayName || '',
-          score: String(pl.score?.displayValue ?? pl.score ?? ''),
-          thru: golfThru(pl),
-        })).filter(x => x.name);
-        if(g.board.some(x => x.thru)) hits++;
+        // ONLY holes played come from here. Scores and positions stay with the tour
+        // scoreboard, so the two feeds can never disagree on the leaderboard itself.
+        const byName = new Map(players.map(pl => [key(pl.athlete?.shortName || pl.athlete?.displayName), golfThru(pl)]));
+        g.board.forEach(row => { const t = byName.get(key(row.name)); if(t) row.thru = t; });
+        if(g.board.some(r => r.thru)) hits++;
       }
-      state.feeds['golf detail'] = hits ? `holes from ${new URL(url).host}` : 'no holes in leaderboard feed';
+      state.feeds['golf holes'] = hits ? `${hits} event(s) from ${new URL(url).host}` : 'no holes in leaderboard feed';
       if(hits) return;
-    }catch(err){ state.feeds['golf detail'] = `failed: ${String(err.message).slice(0,30)}`; }
+    }catch(err){ state.feeds['golf holes'] = `failed: ${String(err.message).slice(0,30)}`; }
   }
 }
 
@@ -632,6 +637,39 @@ function normalizeComp(L, ev, c){
   return g;
 }
 
+// "-15", "E", "+3" → a number we can sort on. Anything unreadable sorts last.
+function toPar(v){
+  if(v == null) return null;
+  const t = String(v).trim();
+  if(/^e(ven)?$/i.test(t)) return 0;
+  const m = /^[+-]?\d+(\.\d+)?$/.exec(t.replace('−','-'));
+  return m ? parseFloat(t.replace('−','-')) : null;
+}
+// Score and position must come from the same record, or the board contradicts itself.
+function golfScore(pl){
+  const stat = (pl.statistics || []).find(x => /scoretopar|toPar|score/i.test(x.name || ''));
+  const raw = pl.score?.displayValue ?? (typeof pl.score === 'object' ? pl.score?.value : pl.score) ?? stat?.displayValue;
+  return raw == null ? '' : String(raw).replace('-','−');
+}
+// Positions are recomputed from the scores we display, so ties and order always agree.
+function buildBoard(players, limit){
+  const rows = players.map(pl => ({
+    name: pl.athlete?.shortName || pl.athlete?.displayName || pl.team?.displayName || '',
+    scoreText: golfScore(pl),
+    par: toPar(golfScore(pl)),
+    thru: golfThru(pl),
+  })).filter(r => r.name);
+  const scored = rows.filter(r => r.par != null).sort((a,b) => a.par - b.par);
+  const rest = rows.filter(r => r.par == null);
+  const ordered = [...scored, ...rest];
+  ordered.forEach((r,i) => {
+    const tied = ordered.filter(x => x.par != null && x.par === r.par).length > 1;
+    const firstIdx = ordered.findIndex(x => x.par === r.par);
+    r.pos = r.par == null ? '' : (tied ? 'T' : '') + (firstIdx + 1);
+  });
+  return ordered.slice(0, limit).map(r => ({pos:r.pos, name:r.name, score:r.scoreText, thru:r.thru}));
+}
+
 // ESPN reports holes played in several shapes depending on the tour and round state.
 function golfThru(pl){
   const st = pl.status || {};
@@ -652,17 +690,18 @@ function normalizeGolf(L, ev){
   const players = (c.competitors||[]).slice().sort((a,b) => (a.sortOrder ?? a.order ?? 999) - (b.sortOrder ?? b.order ?? 999));
   const name = ev.name || ev.shortName || L.label;
   const isCup = /ryder cup|presidents cup|solheim cup|walker cup|curtis cup|junior ryder cup/i.test(name);
-  const board = (isCup ? players.slice(0,2) : players.slice(0,4)).map((pl,i) => ({
-    pos:  pl.status?.position?.displayName || pl.status?.position?.id || String(i+1),
-    name: pl.team?.displayName || pl.team?.shortDisplayName || pl.athlete?.shortName || pl.athlete?.displayName || '',
-    score: String(pl.score?.displayValue ?? pl.score ?? ''),
-    thru: golfThru(pl),
-  })).filter(x => x.name);
+  const board = isCup
+    ? players.slice(0,2).map(pl => ({
+        pos:'', thru:'',
+        name: pl.team?.displayName || pl.team?.shortDisplayName || pl.athlete?.displayName || '',
+        score: String(pl.score?.displayValue ?? pl.score ?? ''),
+      })).filter(x => x.name)
+    : buildBoard(players, 4);
   const lead = players[0];
   const leadName = lead?.athlete?.shortName || lead?.athlete?.displayName || '';
   const leadScore = lead?.score?.displayValue ?? lead?.score ?? '';
   return {
-    id: `golf:${ev.id}`, league: L, isEvent: true,
+    id: `golf:${ev.id}`, eventId: ev.id, league: L, isEvent: true,
     start: new Date(ev.date), end: ev.endDate ? new Date(ev.endDate) : null,
     state: st.state, detail: st.detail, completed: st.completed,
     name, board, cup: isCup, lead: leadName ? `${leadName} ${leadScore}` : '',
@@ -742,7 +781,7 @@ function resolveWatch(g){
 
   // League fallbacks when the feed only lists regional networks
   if(!usable.length){
-    if(L === 'mlb') usable = [{label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', dom:'mlb.com', mlbtv:true}];
+    if(L === 'mlb') usable = [{label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', img:MLBTV_SQ, mlbtv:true}];
     else if(L === 'nhl' && !teams.includes('CAR')) usable = [{label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, guess:true}];
     else if(L === 'wvb') usable = [{label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', guess:true}];
     else if(L === 'chky') usable = [{label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, guess:true}];
@@ -891,7 +930,40 @@ function scoreGame(g){
     if(m <= close){ const b = late ? 16 : 6; r += b; why.push(`${late?'close late':'close'} +${b}`); }
     else if(m > close*3){ r -= 12; why.push('blowout −12'); }
     if(/\bOT\b|\/\d+|extra/.test(g.detail) || (g.regPeriods && g.period > g.regPeriods)){ r += 8; why.push('overtime +8'); }
+
+    if(late && m <= close && hs === as){ r += 6; why.push('tied late +6'); }
   }
+  if(g.state !== 'pre' && !L.tennis && !isNaN(hs) && !isNaN(as)){
+    const lead = hs > as ? 'home' : as > hs ? 'away' : null;
+    const margin = Math.abs(hs - as);
+    const close = {nfl:8, ncaaf:8, mlb:2, nhl:1, ncaab:6, nba:6}[L.key] ?? 3;
+
+    // Underdog in front: the pregame moneyline says who wasn't supposed to be here.
+    const favSide = pickFav(g.odds?.ml);
+    if(lead && favSide && lead !== favSide){
+      const dogPrice = parseInt(g.odds.ml[lead], 10);
+      const b = dogPrice >= 200 ? 14 : dogPrice >= 130 ? 9 : 5;
+      r += b; why.push(`upset brewing +${b}`);
+    }
+
+    // Down to the wire: final period, one score, clock winding down.
+    if(isLate(g) && margin <= close){
+      const secs = clockSeconds(g.clock);
+      const wire = (L.key === 'mlb') ? g.period >= 9 : (secs != null && secs <= 180);
+      if(wire){ r += 10; why.push('down to the wire +10'); }
+    }
+
+    // Comeback: track the widest margin we've seen and reward the climb back.
+    const peak = Math.max(state.peakMargin[g.id] || 0, margin);
+    state.peakMargin[g.id] = peak;
+    if(peak >= close * 2.5 && margin <= close){ r += 8; why.push('comeback +8'); }
+
+    // The drama bonuses overlap by design; without a ceiling a tense midweek game
+    // can crowd out a favorite. 88 keeps it below the Brewers and Packers floors.
+    if(!hasFav(g) && r > 88){ r = 88; why.push('live drama capped at 88'); }
+  }
+
+  if(/clinch|elimination|eliminated|win and in|rivalry/i.test(g.notes || '')){ r += 6; why.push('stakes +6'); }
   if(g.state === 'in'){ r += 5; why.push('live +5'); }
   if(g.state === 'post'){ r -= 8; why.push('final −8'); }
 
@@ -914,6 +986,11 @@ function finish(g, r, why){
   if(!g.watch.ok && !hasFav(g) && !g.cup){ r -= 15; why.push('not in your lineup −15'); }
   g.rating = Math.max(1, Math.min(99, Math.round(r)));
   g.why = why.join(' · ');
+}
+// "2:14" or "14:02" → seconds remaining in the period.
+function clockSeconds(clock){
+  const m = /^(\d+):(\d{2})$/.exec(String(clock || '').trim());
+  return m ? (+m[1]) * 60 + (+m[2]) : null;
 }
 function hasFav(g){ return !!(g.home?.fav || g.away?.fav); }
 function isLate(g){
@@ -964,13 +1041,13 @@ function sideHTML(g, s){
 function detailHTML(g){
   if(g.state === 'pre') return oddsHTML(g);
   const L = g.league.key;
-  const cell = t => `<b>${esc(t === '' || t == null ? '–' : t)}</b>`;
+  const cell = (t, cls) => `<b class="${cls || ''}">${esc(t === '' || t == null ? '–' : t)}</b>`;
   const head = t => `<span class="h">${esc(t)}</span>`;
 
   if(L === 'mlb'){
     return `<div class="box cols3">${head('R')}${head('H')}${head('E')}
-      ${cell(g.away.score)}${cell(g.away.hits)}${cell(g.away.errors)}
-      ${cell(g.home.score)}${cell(g.home.hits)}${cell(g.home.errors)}</div>`;
+      ${cell(g.away.score,'t')}${cell(g.away.hits)}${cell(g.away.errors)}
+      ${cell(g.home.score,'t')}${cell(g.home.hits)}${cell(g.home.errors)}</div>`;
   }
 
   const aw = g.away.line || [], hm = g.home.line || [];
@@ -979,11 +1056,11 @@ function detailHTML(g){
   const setSport = g.league.tennis || L === 'wvb';
   const labels = Array.from({length:n}, (_,i) => setSport ? `S${i+1}` : String(i+1));
   const total = setSport ? [] : [g.away.score, g.home.score];
-  const cols = n + (total.length ? 1 : 0);
-  return `<div class="box" style="grid-template-columns:repeat(${cols},1fr)">
-    ${labels.map(head).join('')}${total.length ? head('T') : ''}
-    ${Array.from({length:n}, (_,i) => cell(aw[i])).join('')}${total.length ? cell(total[0]) : ''}
-    ${Array.from({length:n}, (_,i) => cell(hm[i])).join('')}${total.length ? cell(total[1]) : ''}</div>`;
+  const tot = total.length > 0;
+  return `<div class="box split" style="grid-template-columns:repeat(${n},1fr)${tot ? ' 12px 30px' : ''}">
+    ${labels.map(head).join('')}${tot ? '<span></span>' + head('T') : ''}
+    ${Array.from({length:n}, (_,i) => cell(aw[i], 'p')).join('')}${tot ? '<span class="rule"></span>' + cell(total[0], 't') : ''}
+    ${Array.from({length:n}, (_,i) => cell(hm[i], 'p')).join('')}${tot ? '<span class="rule"></span>' + cell(total[1], 't') : ''}</div>`;
 }
 
 function statusHTML(g){
@@ -1139,7 +1216,7 @@ function render(){
   const sec = $('#sections');
   sec.innerHTML = html || `<div class="empty">Nothing matches these filters. Tap <b>All</b> on the Status or Sport row to widen the view.</div>`;
   flashScores(sec);
-  renderOnDeck(); tickPulse();
+  tickPulse();
 }
 
 function flashScores(root){
@@ -1169,17 +1246,6 @@ document.addEventListener('change', e => {
   const sel = e.target.closest('.filterbar select'); if(!sel) return;
   state.filters[sel.dataset.k] = sel.value; saveJSON('ruwt.filters', state.filters); render();
 });
-
-function renderOnDeck(){
-  const up = state.games.filter(g => hasFav(g) && g.state !== 'post').sort((a,b) => a.start - b.start)[0];
-  const el = $('#ondeck');
-  if(!up){ el.textContent = 'On deck: no favorite-team games in the next day.'; return; }
-  const f = up.home.fav ? up.home : up.away;
-  const opp = up.home.fav ? up.away : up.home;
-  const when = up.state === 'in' ? `LIVE ${up.detail}` : `${fmtDay.format(up.start)} ${fmtTime.format(up.start)}`;
-  const ch = up.watch.primary ? `${up.watch.primary.label}${up.watch.primary.ch ? ' ' + up.watch.primary.ch : ''}` : up.watch.note;
-  el.textContent = `On deck: ${f.fav.mark} ${f.name} ${up.home.fav ? 'vs' : 'at'} ${opp.name}, ${when}, ${ch}`;
-}
 
 /* Status pill */
 function setPulse(kind, text){ const p = $('#pulse'); p.className = 'pulse ' + (kind==='err'?'err':kind==='ok'?'ok':''); $('#pulseText').textContent = text; }
