@@ -109,7 +109,8 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 40px}
 .pill{display:inline-block;border-radius:4px;padding:2px 7px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
 
 .chan{display:flex;align-items:center;justify-content:center;gap:8px}
-.mk{position:relative;display:inline-flex;width:26px;height:26px;cursor:help}
+.mk{position:relative;display:inline-flex;flex-direction:column;align-items:center;width:34px;cursor:help}
+.mk .cap{font-size:8.5px;line-height:1.2;color:#555;margin-top:1px;letter-spacing:.2px;white-space:nowrap}
 .chan img.netlogo{height:26px;width:26px;object-fit:contain;border-radius:5px}
 .mk.out img{filter:grayscale(1);opacity:.4}
 .chan .pill{font-size:10px;padding:2px 5px}
@@ -235,6 +236,8 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   <div class="hint" style="margin-bottom:10px">Odds are the pregame numbers from ESPN's feed. Lines on a game in progress are the ones posted before first pitch or kickoff.</div>
   <label>Feeds, last refresh</label>
   <div class="hint" id="feedStatus">—</div>
+  <label>Channel names ESPN sent</label>
+  <div class="hint" id="chanStatus">—</div>
   <div class="hint" style="margin-top:12px">Braves, Reds, Nationals and Orioles games are treated as blacked out on MLB.TV and flagged instead.</div>
   <label>Rating colors</label>
   <div class="legend"><span style="background:var(--r80)">80+</span><span style="background:var(--r70)">70–79</span><span style="background:var(--r60);color:#111">60–69</span><span style="background:var(--r50)">50–59</span><span style="background:var(--r0)">&lt;50</span></div>
@@ -334,27 +337,27 @@ const LOGO2 = d => `https://icons.duckduckgo.com/ip3/${d}.ico`;
 // DirecTV Stream MySports channels (Charlotte). ch = guide number. dom = logo lookup.
 // Each entry: regex on ESPN broadcast name → how Dan watches it.
 const SOURCES = [
-  [/^espn ?unl|^espn\+|^espn app|nhl power play/i, {label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, stream:true}],
-  [/b1g\+|btn\+|big ?ten\+/i,  {label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', stream:true}],
-  [/fox ?one/i,              {label:'FOX One', bg:'#003a70', dom:'fox.com', stream:true, notMine:true}],
-  [/^espn2$/i,               {label:'ESPN2', ch:209, bg:'#c8102e', img:ESPN2_TILE}],
-  [/^espnu$/i,               {label:'ESPNU', ch:208, bg:'#c8102e', img:ESPNU_TILE}],
-  [/^espnews$/i,             {label:'ESPNEWS', ch:207, bg:'#c8102e', img:ESPNN_TILE}],
-  [/^espn$/i,                {label:'ESPN', ch:206, bg:'#c8102e', img:ESPN_TILE}],
+  [/^espn ?unl|^espn\+|^espn app|nhl power play/i, {caption:'ESPN+', label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, stream:true}],
+  [/b1g\+|btn\+|big ?ten\+/i,  {caption:'BTN+', label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', stream:true}],
+  [/fox ?one/i,              {label:'FOX', ch:46, bg:'#003a70', dom:'fox.com'}],
+  [/^espn2$/i,               {caption:'ESPN2', label:'ESPN2', ch:209, bg:'#c8102e', img:ESPN2_TILE}],
+  [/^espnu$/i,               {caption:'ESPNU', label:'ESPNU', ch:208, bg:'#c8102e', img:ESPNU_TILE}],
+  [/^espnews$/i,             {caption:'ESPNews', label:'ESPNEWS', ch:207, bg:'#c8102e', img:ESPNN_TILE}],
+  [/^espn$/i,                {caption:'ESPN', label:'ESPN', ch:206, bg:'#c8102e', img:ESPN_TILE}],
   [/^abc$/i,                 {label:'ABC', ch:9, bg:'#000', also:'ESPN app', dom:'abc.com'}],
   [/^cbs$/i,                 {label:'CBS', ch:3, bg:'#0033a0', dom:'cbs.com'}],
   [/^nbc$/i,                 {label:'NBC', ch:36, bg:'#6c2dc7', also:'Peacock', dom:'nbc.com'}],
   [/^fox$/i,                 {label:'FOX', ch:46, bg:'#003a70', dom:'fox.com'}],
   [/sec ?net|^secn/i,        {label:'SECN', ch:611, bg:'#004b8d', also:'ESPN app', dom:'espn.com'}],
   [/^acc ?n|acc network/i,   {label:'ACCN', ch:612, bg:'#013ca6', also:'ESPN app', dom:'espn.com'}],
-  [/big ?ten|^btn/i,         {label:'BTN', ch:610, bg:'#0088ce', dom:'bigten.org'}],
+  [/big ?ten|^btn/i,         {caption:'BTN', label:'BTN', ch:610, bg:'#0088ce', dom:'bigten.org'}],
   [/cbs ?sports ?net|^cbssn/i,{label:'CBSSN', ch:221, bg:'#0033a0', dom:'cbssports.com'}],
-  [/^fs1$|fox sports 1/i,    {label:'FS1', ch:219, bg:'#003a70', dom:'foxsports.com'}],
-  [/^fs2$|fox sports 2/i,    {label:'FS2', ch:618, bg:'#003a70', dom:'foxsports.com'}],
+  [/^fs ?1$|fox sports 1/i,  {caption:'FS1', label:'FS1', ch:219, bg:'#003a70', dom:'foxsports.com'}],
+  [/^fs ?2$|fox sports 2/i,  {caption:'FS2', label:'FS2', ch:618, bg:'#003a70', dom:'foxsports.com'}],
   [/golf/i,                  {label:'Golf', ch:218, bg:'#1b5e20', also:'Peacock', dom:'golfchannel.com'}],
   [/tennis ?ch|^tennis$/i,   {label:'Tennis Ch', ch:217, bg:'#2e7d32', dom:'tennischannel.com'}],
   [/nhl ?net/i,              {label:'NHLN', ch:215, bg:'#000', dom:'nhl.com'}],
-  [/mlb ?net/i,              {label:'MLBN', ch:213, bg:'#041E42', dom:'mlb.com'}],
+  [/mlb ?net(work)?|^mlbn$/i, {caption:'MLB Net', label:'MLB Network', ch:213, bg:'#041E42', dom:'mlb.com'}],
   [/nfl ?net/i,              {label:'NFLN', ch:212, bg:'#013369', dom:'nfl.com'}],
   [/nba ?tv/i,               {label:'NBA TV', ch:216, bg:'#1d428a', dom:'nba.com'}],
   [/^tbs$/i,                 {label:'TBS', ch:247, bg:'#222', also:'HBO Max', dom:'tbs.com'}],
@@ -368,7 +371,7 @@ const SOURCES = [
   [/hbo|^max$/i,             {label:'HBO Max', bg:'#002be7', svc:'HBO Max', dom:'max.com'}],
   [/disney/i,                {label:'Disney+', bg:'#113ccf', svc:'Disney+', dom:'disneyplus.com'}],
   [/hulu/i,                  {label:'Hulu', bg:'#1ce783', svc:'Hulu', dark:true, dom:'hulu.com'}],
-  [/mlb\.?tv/i,              {label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', mlbtv:true, img:MLBTV_SQ}],
+  [/mlb\.?tv/i,              {caption:'MLB.TV', label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', mlbtv:true, dom:'mlb.com'}],
   [/tubi/i,                  {label:'Tubi', bg:'#7408ff', svc:'free', dom:'tubitv.com'}],
   [/victory/i,               {label:'Victory+', bg:'#333', svc:'free', dom:'victoryplus.com'}],
 ];
@@ -379,7 +382,7 @@ const SOURCES = [
 const state = {
   games: [], filters: loadJSON('ruwt.filters', {day:'today', status:'all', sport:'all', sort:'rating', show:'all'}),
   lastOk: null, error: null, prevScores: new Map(), oddsCache: loadJSON('ruwt.odds', {}),
-  timer: null, loading: false, feeds: {}, oddsFetched: {}, peakMargin: {},
+  timer: null, loading: false, feeds: {}, oddsFetched: {}, peakMargin: {}, seenNames: {}, unmatched: {},
 };
 function loadJSON(k, d){ try{ const v = localStorage.getItem(k); return v ? {...d, ...JSON.parse(v)} : d; }catch{ return d; } }
 function saveJSON(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
@@ -501,7 +504,7 @@ async function refresh(){
   const active = LEAGUES.filter(inSeason);
   const results = await Promise.allSettled(active.map(fetchLeague));
   const games = manualGames(); const failed = [];
-  state.feeds = {};
+  state.feeds = {}; state.seenNames = {}; state.unmatched = {};
   results.forEach((r,i) => {
     const L = active[i];
     if(r.status === 'fulfilled'){
@@ -766,22 +769,25 @@ function resolveWatch(g){
   let found = [];
   for(const b of g.broadcasts){
     const hit = SOURCES.find(([re]) => re.test(b.name.trim()));
-    if(hit) found.push({...hit[1], raw:b.name, market:b.market, logo:b.logo || hit[1].logo || ''});
-    else found.push({label:b.name, raw:b.name, market:b.market, unknown:true});
+    state.seenNames[b.name] = (state.seenNames[b.name] || 0) + 1;
+    if(hit) found.push({...hit[1], raw:b.name, market:b.market, logo:b.logo || ''});
+    else { state.unmatched[b.name] = (state.unmatched[b.name] || 0) + 1;
+           found.push({label:b.name, raw:b.name, market:b.market, unknown:true}); }
   }
   const L = g.league.key;
   const teams = [g.home?.abbr, g.away?.abbr].filter(Boolean);
   const blacked = L === 'mlb' && teams.some(t => blackoutList().includes(t));
 
-  // FOX One is the streaming-only simulcast: if plain FOX is also listed, it's noise.
-  if(found.some(f => /^fox$/i.test(f.label)) ) found = found.filter(f => f.label !== 'FOX One');
+  // Collapse duplicates that resolve to the same channel (FOX + FOX One, ESPN + ESPN Unlmtd).
+  const seenCh = new Set();
+  found = found.filter(f => { if(!f.ch) return true; if(seenCh.has(f.ch)) return false; seenCh.add(f.ch); return true; });
 
   // Usable = a DTV channel or a service Dan actually has.
   let usable = found.filter(f => !f.unknown && !f.notMine);
 
   // League fallbacks when the feed only lists regional networks
   if(!usable.length){
-    if(L === 'mlb') usable = [{label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', img:MLBTV_SQ, mlbtv:true}];
+    if(L === 'mlb') usable = [{caption:'MLB.TV', label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', dom:'mlb.com', mlbtv:true}];
     else if(L === 'nhl' && !teams.includes('CAR')) usable = [{label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, guess:true}];
     else if(L === 'wvb') usable = [{label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', guess:true}];
     else if(L === 'chky') usable = [{label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, guess:true}];
@@ -796,6 +802,9 @@ function resolveWatch(g){
   // DTV leads by default. Exception: a live event whose linear window hasn't opened yet
   // (early golf rounds) leads with the stream that is actually carrying it right now.
   let ranked = linearOnAir(g) ? [...dtv, ...streams] : [...streams, ...dtv];
+
+  // If it's on an ESPN channel, the ESPN+ simulcast adds nothing.
+  if(ranked.some(u => u.ch && /ESPN/.test(u.label))) ranked = ranked.filter(u => u.svc !== 'ESPN+');
 
   // On baseball, MLB.TV covers whatever ESPN+ would have carried — one mark is enough.
   if(L === 'mlb' && ranked.some(u => u.mlbtv)) ranked = ranked.filter(u => u.svc !== 'ESPN+');
@@ -1075,12 +1084,13 @@ function statusHTML(g){
 function markHTML(p){
   const title = p.label + (p.ch ? ` · DTV ${p.ch}` : '') + (p.blackout ? ' · blackout, VPN via ESPN' : '');
   const pill = `<span class="pill" style="background:${esc(p.bg||'#333')};${p.dark?'color:#111':''}">${esc(p.label)}</span>`;
-  const src = p.img || (p.dom ? LOGO1(p.dom) : p.logo || '');
-  const alt = p.img ? '' : p.alt2 ? LOGO1(p.alt2) : (p.dom ? LOGO2(p.dom) : '');
+  const src = p.logo || p.img || (p.dom ? LOGO1(p.dom) : '');
+  const alt = p.alt2 ? LOGO1(p.alt2) : p.img && p.logo ? p.img : (p.dom ? LOGO2(p.dom) : '');
   const img = src
     ? `<img class="netlogo" src="${esc(src)}" alt="${esc(p.label)}" loading="lazy" data-alt="${esc(alt)}" data-chip="${esc(pill)}">`
     : pill;
-  return `<span class="mk${p.blackout ? ' out' : ''}" title="${esc(title)}">${img}</span>`;
+  const cap = p.caption ? `<span class="cap">${esc(p.caption)}</span>` : '';
+  return `<span class="mk${p.blackout ? ' out' : ''}" title="${esc(title + (p.raw && p.raw !== p.label ? ` (feed: ${p.raw})` : ''))}">${img}${cap}</span>`;
 }
 function chanHTML(g){
   const w = g.watch;
@@ -1263,6 +1273,10 @@ function showNotice(msg){ $('#notice').innerHTML = msg ? `<div class="notice">${
 $('#settingsBtn').onclick = () => {
   $('#feedStatus').innerHTML = Object.entries(state.feeds)
     .map(([k,v]) => `${esc(k)}: ${esc(v)}`).join('<br>') || '—';
+  const un = Object.entries(state.unmatched).sort((a,b) => b[1] - a[1]).slice(0,14);
+  const kn = Object.keys(state.seenNames).length;
+  $('#chanStatus').innerHTML = `${kn} distinct names seen. ` +
+    (un.length ? `Unmatched: ${un.map(([n,c]) => esc(n) + ' ×' + c).join(', ')}` : 'All matched.');
   $('#settings').showModal();
 };
 $('#settingsCancel').onclick = () => $('#settings').close();
