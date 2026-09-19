@@ -110,8 +110,8 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 40px}
 .pill{display:inline-block;border-radius:4px;padding:2px 7px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
 
 .chan{display:flex;align-items:center;justify-content:center;gap:8px}
-.mk{position:relative;display:inline-flex;align-items:center;width:26px;height:26px;cursor:help}
-.chan img.netlogo{height:26px;width:26px;object-fit:contain;border-radius:5px}
+.mk{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;cursor:help}
+.chan img.netlogo{height:26px;max-width:44px;width:auto;object-fit:contain;border-radius:4px}
 .mk.out img{filter:grayscale(1);opacity:.4}
 .chan .pill{font-size:10px;padding:2px 5px}
 
@@ -383,6 +383,7 @@ const state = {
   games: [], filters: loadJSON('ruwt.filters', {day:'today', status:'all', sport:'all', sort:'rating', show:'all'}),
   lastOk: null, error: null, prevScores: new Map(), oddsCache: loadJSON('ruwt.odds', {}),
   timer: null, loading: false, feeds: {}, oddsFetched: {}, peakMargin: {}, seenNames: {}, unmatched: {},
+  netArt: loadJSON('ruwt.netart', {}),
 };
 function loadJSON(k, d){ try{ const v = localStorage.getItem(k); return v ? {...d, ...JSON.parse(v)} : d; }catch{ return d; } }
 function saveJSON(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
@@ -770,7 +771,15 @@ function resolveWatch(g){
   for(const b of g.broadcasts){
     const hit = SOURCES.find(([re]) => re.test(b.name.trim()));
     state.seenNames[b.name] = (state.seenNames[b.name] || 0) + 1;
-    if(hit) found.push({...hit[1], raw:b.name, market:b.market, logo:b.logo || ''});
+    if(hit){
+      const src = hit[1];
+      const same = b.name.replace(/[^a-z0-9]/gi,'').toLowerCase() === (src.label||'').replace(/[^a-z0-9]/gi,'').toLowerCase();
+      if(same && b.logo && state.netArt[src.label] !== b.logo){
+        state.netArt[src.label] = b.logo;
+        saveJSON('ruwt.netart', state.netArt);
+      }
+      found.push({...src, raw:b.name, market:b.market, logo:b.logo || ''});
+    }
     else { state.unmatched[b.name] = (state.unmatched[b.name] || 0) + 1;
            found.push({label:b.name, raw:b.name, market:b.market, unknown:true}); }
   }
@@ -1085,9 +1094,10 @@ function markHTML(p){
   const title = p.label + (p.ch ? ` · DTV ${p.ch}` : '') + (p.blackout ? ' · blackout, VPN via ESPN' : '');
   const pill = `<span class="pill" style="background:${esc(p.bg||'#333')};${p.dark?'color:#111':''}">${esc(p.label)}</span>`;
   const same = (p.raw || '').replace(/[^a-z0-9]/gi,'').toLowerCase() === (p.label || '').replace(/[^a-z0-9]/gi,'').toLowerCase();
-  const feedArt = same ? p.logo : '';          // renamed match → our mark, not theirs
-  const src = feedArt || p.img || (p.dom ? LOGO1(p.dom) : p.logo || '');
-  const alt = p.alt2 ? LOGO1(p.alt2) : (p.dom ? LOGO2(p.dom) : (p.img || ''));
+  // The official wordmark, once seen for this network, is used for every one of its
+  // entries — including ones the feed named differently (ESPN Unlmtd → ESPN+).
+  const src = state.netArt[p.label] || (same ? p.logo : '') || p.img || (p.dom ? LOGO1(p.dom) : '');
+  const alt = p.img || (p.dom ? LOGO1(p.dom) : '') || (p.alt2 ? LOGO1(p.alt2) : '');
   const img = src
     ? `<img class="netlogo" src="${esc(src)}" alt="${esc(p.label)}" loading="lazy" data-alt="${esc(alt)}" data-chip="${esc(pill)}">`
     : pill;
