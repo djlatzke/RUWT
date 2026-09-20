@@ -242,6 +242,7 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   <label>Rating colors</label>
   <div class="legend"><span style="background:var(--r80)">80+</span><span style="background:var(--r70)">70–79</span><span style="background:var(--r60);color:#111">60–69</span><span style="background:var(--r50)">50–59</span><span style="background:var(--r0)">&lt;50</span></div>
   <div class="row">
+    <button class="iconbtn" id="clearArt" type="button">Reset logos</button>
     <button class="iconbtn" id="settingsCancel" type="button">Cancel</button>
     <button class="iconbtn" id="settingsSave" type="button" style="background:#000;color:#fff">Save</button>
   </div>
@@ -330,6 +331,7 @@ const ESPN2_TILE = sqLogo('#c8102e', 'ESPN2', 13);
 const ESPNU_TILE = sqLogo('#c8102e', 'ESPNU', 13);
 const ESPNN_TILE = sqLogo('#c8102e', 'NEWS', 14);
 const MLBTV_SQ   = sqLogo('#041E42', 'MLB.TV', 12);
+const SUNDAY_TKT = sqLogo('#013369', 'ST', 22);
 
 const LOGO1 = d => `https://www.google.com/s2/favicons?sz=64&domain=${d}`;
 const LOGO2 = d => `https://icons.duckduckgo.com/ip3/${d}.ico`;
@@ -815,6 +817,19 @@ function resolveWatch(g){
   // If it's on an ESPN channel, the ESPN+ simulcast adds nothing.
   if(ranked.some(u => u.ch && /ESPN/.test(u.label))) ranked = ranked.filter(u => u.svc !== 'ESPN+');
 
+  // NFL Sunday afternoons: FOX and CBS carry only the games assigned to this market.
+  // ESPN flags nationally distributed windows; anything else regional is a Sunday
+  // Ticket game here, apart from the Panthers, who are always the local carry.
+  if(L === 'nfl'){
+    const primetime = ranked.some(u => /NBC|ESPN|ABC|Prime|Netflix|Peacock|NFL Network/i.test(u.label));
+    const nationalWindow = found.some(f => f.market === 'national');
+    const panthers = teams.includes('CAR');
+    if(!primetime && !nationalWindow && !panthers){
+      ranked = [{label:'Sunday Ticket', bg:'#013369', img:SUNDAY_TKT, svc:'Sunday Ticket', st:true},
+                ...ranked.map(u => ({...u, faded:true}))];
+    }
+  }
+
   // On baseball, MLB.TV covers whatever ESPN+ would have carried — one mark is enough.
   if(L === 'mlb' && ranked.some(u => u.mlbtv)) ranked = ranked.filter(u => u.svc !== 'ESPN+');
 
@@ -1085,13 +1100,14 @@ function statusHTML(g){
   const t = fmtTime.format(g.start);
   const today = dayKey(new Date()) === dayKey(g.start);
   const when = today ? t : `${fmtDay.format(g.start)} ${t}`;
-  if(g.state === 'in') return `<span class="st live">${esc(g.detail || 'Live')}</span><span>${esc(when)}</span>`;
+  if(g.state === 'in') return `<span class="st live">${esc(g.detail || 'Live')}</span>`;
   if(g.state === 'post') return `<span class="st">${esc(g.detail || 'Final')}</span><span>${esc(when)}</span>`;
   return `<span class="st">${esc(when)}</span>${/postpon|delay|cancel/i.test(g.detail) ? `<span>${esc(g.detail)}</span>` : ''}`;
 }
 
 function markHTML(p){
-  const title = p.label + (p.ch ? ` · DTV ${p.ch}` : '') + (p.blackout ? ' · blackout, VPN via ESPN' : '');
+  const title = p.label + (p.ch ? ` · DTV ${p.ch}` : '') + (p.blackout ? ' · blackout, VPN via ESPN' : '')
+    + (p.faded ? ' · not the local window here' : '') + (p.st ? ' · out-of-market, stream it' : '');
   const pill = `<span class="pill" style="background:${esc(p.bg||'#333')};${p.dark?'color:#111':''}">${esc(p.label)}</span>`;
   const same = (p.raw || '').replace(/[^a-z0-9]/gi,'').toLowerCase() === (p.label || '').replace(/[^a-z0-9]/gi,'').toLowerCase();
   // The official wordmark, once seen for this network, is used for every one of its
@@ -1101,7 +1117,7 @@ function markHTML(p){
   const img = src
     ? `<img class="netlogo" src="${esc(src)}" alt="${esc(p.label)}" loading="lazy" data-alt="${esc(alt)}" data-chip="${esc(pill)}">`
     : pill;
-  return `<span class="mk${p.blackout ? ' out' : ''}" title="${esc(title + (p.raw && p.raw !== p.label ? ` (feed: ${p.raw})` : ''))}">${img}</span>`;
+  return `<span class="mk${p.blackout || p.faded ? ' out' : ''}" title="${esc(title + (p.raw && p.raw !== p.label ? ` (feed: ${p.raw})` : ''))}">${img}</span>`;
 }
 function chanHTML(g){
   const w = g.watch;
@@ -1291,6 +1307,10 @@ $('#settingsBtn').onclick = () => {
   $('#settings').showModal();
 };
 $('#settingsCancel').onclick = () => $('#settings').close();
+$('#clearArt').onclick = () => {
+  state.netArt = {}; try{ localStorage.removeItem('ruwt.netart'); }catch{}
+  $('#settings').close(); refresh();
+};
 $('#settingsSave').onclick = () => {
   $('#settings').close(); refresh();
 };
