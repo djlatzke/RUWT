@@ -824,7 +824,8 @@ function resolveWatch(g){
     const primetime = ranked.some(u => /NBC|ESPN|ABC|Prime|Netflix|Peacock|NFL Network/i.test(u.label));
     const panthers = teams.includes('CAR');
     if(!primetime && !panthers){
-      ranked = [{label:'Sunday Ticket', bg:'#013369', img:SUNDAY_TKT, svc:'Sunday Ticket', st:true},
+      ranked = [{label:'Sunday Ticket', bg:'#013369', dom:'tv.youtube.com', alt2:'youtube.com',
+                 img:SUNDAY_TKT, svc:'Sunday Ticket', st:true},
                 ...ranked.map(u => ({...u, faded:true}))];
     }
   }
@@ -1113,7 +1114,7 @@ function markHTML(p){
   // entries — including ones the feed named differently (ESPN Unlmtd → ESPN+).
   const src = p.noFeedArt ? (p.dom ? LOGO1(p.dom) : p.img)
             : (state.netArt[p.label] || (same ? p.logo : '') || p.img || (p.dom ? LOGO1(p.dom) : ''));
-  const alt = p.img || (p.dom ? LOGO1(p.dom) : '') || (p.alt2 ? LOGO1(p.alt2) : '');
+  const alt = (p.alt2 ? LOGO1(p.alt2) : '') || p.img || (p.dom ? LOGO2(p.dom) : '');
   const img = src
     ? `<img class="netlogo" src="${esc(src)}" alt="${esc(p.label)}" loading="lazy" data-alt="${esc(alt)}" data-chip="${esc(pill)}">`
     : pill;
