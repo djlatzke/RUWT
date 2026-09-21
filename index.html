@@ -262,7 +262,7 @@ const FAVORITES = {
   nfl:   { GB:  {min:92, mark:'⭐'} },   // Packers: always top of the board
   mlb:   { MIL: {min:90, mark:'⭐'} },   // Brewers: same
 
-  nhl:   { CAR: {min:82, mark:'⭐'}, CHI: {min:76, mark:'⭐'} },
+  nhl:   { CHI: {min:84, mark:'⭐'}, CAR: {min:80, mark:'⭐'} },
   ncaab: { WIS: {min:80, mark:'⭐'}, ILL: {bonus:12, mark:'✨'} },
   ncaaf: { WIS: {min:80, mark:'⭐'}, ILL: {bonus:12, mark:'✨'} },
   chky:  { WIS: {min:78, mark:'⭐'} },
@@ -279,9 +279,17 @@ const TENNIS_TIERS = [
 function tennisTier(name){ return TENNIS_TIERS.find(t => t.re.test(name || '')) || null; }
 
 // Teams Dan watches but doesn't treat as his own — a nudge, not a star.
-const SECOND_TIER = { mlb: { CHC: 14 } };
+const SECOND_TIER = { mlb: { CHC: 8 } };   // Cubs interest on top of the NL race weighting
+
+// The NL seeding picture the Brewers are fighting through. Games among these teams
+// move the standings that matter, so each side in the race adds weight.
+const NL_RACE = ['MIL','CHC','LAD','ATL','PHI','SD','ARI'];
+
+// Packers context: division rivals first, the rest of the conference a nudge behind.
+const NFC_NORTH = ['GB','CHI','MIN','DET'];
+const NFC = ['ARI','ATL','CAR','CHI','DAL','DET','GB','LAR','MIN','NO','NYG','PHI','SEA','SF','TB','WSH'];
 // Second-tier teams get a lift but can never outrank a game with a favorite in it.
-const SECOND_TIER_CAP = 84;
+const SECOND_TIER_CAP = 86;
 
 // Charlotte-proximity ACC schools — secondary to the Big Ten, per your rules.
 const LOCAL_COLLEGE = ['DUKE','UNC','NCST'];
@@ -622,6 +630,7 @@ function normalizeComp(L, ev, c){
     tournament: L.tennis ? (ev.name || ev.shortName || '') : '',
     round: c.round?.displayName || c.type?.text || '',
     notes: (c.notes||[]).map(n => n.headline).filter(Boolean).join(' '),
+    seasonType: ev.season?.type,
     postseason: (ev.season?.type === 3) || /playoff|bowl|championship|final/i.test((c.notes||[]).map(n=>n.headline).join(' ')),
     broadcasts: broadcastNames(c, ev),
     odds: parseOdds(c),
@@ -926,6 +935,19 @@ function scoreGame(g){
     if(local.length){ r += 4; why.push(`${local.join('/')} nearby +4`); }
   }
   if(g.postseason){ r += 12; why.push('postseason +12'); }
+  // Exhibition games don't count in the standings and shouldn't crowd the board.
+  if(g.seasonType === 1 || /preseason|exhibition/i.test(g.notes || '')){
+    g.preseason = true; r -= 26; why.push('preseason −26');
+  }
+
+  // Conference weighting for football — deliberately light, since all of it matters.
+  if(L.key === 'nfl'){
+    const abbrs = [g.away.abbr, g.home.abbr];
+    const div = abbrs.filter(a => NFC_NORTH.includes(a)).length;
+    const conf = abbrs.filter(a => NFC.includes(a)).length;
+    if(div){ r += div * 4; why.push(`NFC North +${div * 4}`); }
+    else if(conf){ r += conf * 2; why.push(`NFC +${conf * 2}`); }
+  }
 
   // MLB: a pennant race beats a good matchup between eliminated teams
   if(L.key === 'mlb' && isStretchRun()){
@@ -934,6 +956,10 @@ function scoreGame(g){
     if(live === 2){ r += 18; why.push('both in the race +18'); }
     else if(live === 1){ r += 9; why.push('one in the race +9'); }
     else if(st.every(x => x === 'out')){ r -= 12; why.push('both eliminated −12'); }
+
+    // NL seeding: these are the teams whose results move the Brewers' bracket.
+    const inRace = [g.away.abbr, g.home.abbr].filter(a => NL_RACE.includes(a)).length;
+    if(inRace){ const b = inRace === 2 ? 18 : 9; r += b; why.push(`NL seeding +${b}`); }
   }
 
   // Closeness — the single biggest pregame lever
@@ -994,27 +1020,31 @@ function scoreGame(g){
     state.peakMargin[g.id] = peak;
     if(peak >= close * 2.5 && margin <= close){ r += 8; why.push('comeback +8'); }
 
-    // The drama bonuses overlap by design; without a ceiling a tense midweek game
-    // can crowd out a favorite. 88 keeps it below the Brewers and Packers floors.
-    if(!hasFav(g) && r > 88){ r = 88; why.push('live drama capped at 88'); }
   }
 
   if(/clinch|elimination|eliminated|win and in|rivalry/i.test(g.notes || '')){ r += 6; why.push('stakes +6'); }
-  if(g.state === 'in'){ r += 5; why.push('live +5'); }
+  if(g.state === 'in'){
+    r += 5; why.push('live +5');
+    // The drama bonuses overlap by design; without a ceiling a tense midweek game
+    // crowds out a favorite. 88 keeps it below the Brewers and Packers floors.
+    if(!hasFav(g) && r > 88){ r = 88; why.push('capped at 88'); }
+  }
   if(g.state === 'post'){ r -= 8; why.push('final −8'); }
 
   const bump = SECOND_TIER[L.key];
   if(bump){
     let lifted = false;
     for(const abbr of [g.away.abbr, g.home.abbr]) if(bump[abbr]){ r += bump[abbr]; lifted = true; why.push(`${abbr} +${bump[abbr]}`); }
-    if(lifted && !hasFav(g) && r > SECOND_TIER_CAP){ r = SECOND_TIER_CAP; why.push(`capped at ${SECOND_TIER_CAP}`); }
+    if(lifted && !hasFav(g) && g.state === 'pre' && r > SECOND_TIER_CAP){ r = SECOND_TIER_CAP; why.push(`capped at ${SECOND_TIER_CAP}`); }
   }
 
   // Favorites last so their floors stick
   for(const s of [g.home, g.away]){
     if(!s.fav) continue;
     if(s.fav.bonus){ r += s.fav.bonus; why.push(`${s.abbr} ${s.fav.mark} +${s.fav.bonus}`); }
-    if(s.fav.min && r < s.fav.min){ r = s.fav.min; why.push(`${s.abbr} ${s.fav.mark} floor ${s.fav.min}`); }
+    // A favorite's floor is for games that count; in preseason they get a nudge only.
+    if(g.preseason){ r += 8; why.push(`${s.abbr} ${s.fav.mark} preseason +8`); }
+    else if(s.fav.min && r < s.fav.min){ r = s.fav.min; why.push(`${s.abbr} ${s.fav.mark} floor ${s.fav.min}`); }
   }
   return finish(g, r, why);
 }
