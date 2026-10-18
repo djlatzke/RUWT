@@ -239,6 +239,8 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   <div class="hint" style="margin-bottom:10px">Odds are the pregame numbers from ESPN's feed. Lines on a game in progress are the ones posted before first pitch or kickoff.</div>
   <label>Feeds, last refresh</label>
   <div class="hint" id="feedStatus">—</div>
+  <label>NFL local coverage</label>
+  <div class="hint" id="nflStatus">—</div>
   <label>Channel names ESPN sent</label>
   <div class="hint" id="chanStatus">—</div>
   <div class="hint" style="margin-top:12px">Braves, Reds, Nationals and Orioles games are treated as blacked out on MLB.TV and flagged instead.</div>
@@ -284,11 +286,11 @@ function tennisTier(name){ return TENNIS_TIERS.find(t => t.re.test(name || '')) 
 
 // Which Sunday-afternoon games local FOX and CBS actually carry in Charlotte (28173).
 // Nobody publishes this as data — the506.com builds the maps by hand each week — so
-// this is a weekly list. Key is the NFL week number; each entry is [away, home].
+// this is a weekly list, keyed by the game's date in ET. Each entry is [away, home].
 // Anything not listed falls to Sunday Ticket. Tap a channel logo on any NFL game to
 // correct it yourself; that override is remembered and beats this list.
 const LOCAL_NFL = {
-  7: [['CAR','PHI'], ['CHI','ATL'], ['BUF','LV']],
+  '2026-10-18': [['CAR','PHI'], ['CHI','ATL'], ['BUF','LV']],
 };
 
 // Networks that reach every market: never a Sunday Ticket game.
@@ -803,7 +805,7 @@ const MLB_BLACKOUT = ['ATL','CIN','WSH','BAL'];
 function blackoutList(){ return MLB_BLACKOUT; }
 
 // Stable across refreshes and weeks: week + the two teams.
-function nflKey(g){ return `${g.week || 0}:${g.away.abbr}@${g.home.abbr}`; }
+function nflKey(g){ return `${dayKey(g.start)}:${g.away.abbr}@${g.home.abbr}`; }
 
 function resolveWatch(g){
   let found = [];
@@ -859,7 +861,7 @@ function resolveWatch(g){
   if(L === 'nfl'){
     const national = ranked.some(u => NFL_NATIONAL.test(u.label));
     const panthers = teams.includes('CAR');          // always the local carry
-    const listed = (LOCAL_NFL[g.week] || [])
+    const listed = (LOCAL_NFL[dayKey(g.start)] || [])
       .some(([a,h]) => a === g.away.abbr && h === g.home.abbr);
     const override = state.localFix[nflKey(g)];      // a tap beats everything
     const local = override === 'local' ? true
@@ -1430,6 +1432,14 @@ function showNotice(msg){ $('#notice').innerHTML = msg ? `<div class="notice">${
 $('#settingsBtn').onclick = () => {
   $('#feedStatus').innerHTML = Object.entries(state.feeds)
     .map(([k,v]) => `${esc(k)}: ${esc(v)}`).join('<br>') || '—';
+  const nfl = state.games.filter(x => x.canFix);
+  const days = [...new Set(nfl.map(x => dayKey(x.start)))];
+  const hit = nfl.filter(x => (LOCAL_NFL[dayKey(x.start)] || [])
+    .some(([a,h]) => a === x.away.abbr && h === x.home.abbr)).length;
+  $('#nflStatus').textContent = nfl.length
+    ? `${nfl.length} NFL games on ${days.join(', ')} · ${hit} matched the Charlotte list · ` +
+      `${Object.keys(state.localFix).length} tapped fixes`
+    : 'No NFL games loaded.';
   const un = Object.entries(state.unmatched).sort((a,b) => b[1] - a[1]).slice(0,14);
   const kn = Object.keys(state.seenNames).length;
   $('#chanStatus').innerHTML = `${kn} distinct names seen. ` +
