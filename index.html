@@ -116,6 +116,8 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 40px}
 .mk{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;cursor:help}
 .chan img.netlogo{height:28px;max-width:46px;width:auto;object-fit:contain;border-radius:4px}
 .mk.out img{filter:grayscale(1);opacity:.4}
+.mk.guess::after{content:'?';position:absolute;right:-5px;top:-5px;width:13px;height:13px;border-radius:50%;
+  background:#fff;border:1px solid #b9c0cc;color:#777;font-size:9px;font-weight:700;line-height:12px;text-align:center}
 .chan .pill{font-size:10px;padding:2px 5px}
 
 .chan.bad .pill{background:#fff!important;color:#c62828;border:1.5px dashed #c62828;font-weight:700;padding:3px 9px}
@@ -292,6 +294,24 @@ function tennisTier(name){ return TENNIS_TIERS.find(t => t.re.test(name || '')) 
 const LOCAL_NFL = {
   '2026-10-18': [['CAR','PHI'], ['CHI','ATL'], ['BUF','LV']],
 };
+
+// Wisconsin volleyball's televised matches. Everything not listed is B1G+ streaming,
+// which is the league's own rule for conference matches. Keyed by date in ET.
+// Source: uwbadgers.com broadcast schedule. Times and networks can still change.
+const WVB_TV = {
+  '2026-08-22':'FOX', '2026-09-02':'FS1', '2026-09-03':'FS1', '2026-09-17':'BTN',
+  '2026-09-27':'BTN', '2026-10-01':'BTN', '2026-10-04':'BTN', '2026-10-08':'BTN',
+  '2026-10-10':'FOX', '2026-10-18':'BTN', '2026-10-23':'BTN', '2026-10-25':'FS1',
+  '2026-11-08':'FS1',
+};
+function wvbChannel(net){
+  return ({
+    BTN: {label:'BTN', ch:610, bg:'#0088ce', dom:'bigten.org'},
+    FS1: {label:'FS1', ch:219, bg:'#003a70', dom:'foxsports.com'},
+    FS2: {label:'FS2', ch:618, bg:'#003a70', dom:'foxsports.com'},
+    FOX: {label:'FOX', ch:46, bg:'#003a70', img:FOX_TILE, noFeedArt:true},
+  })[net] || null;
+}
 
 // Networks that reach every market: never a Sunday Ticket game.
 const NFL_NATIONAL = /NBC|ESPN|ABC|Prime|Netflix|Peacock|NFLN|NFL Network/i;
@@ -839,7 +859,12 @@ function resolveWatch(g){
   if(!usable.length){
     if(L === 'mlb') usable = [{caption:'MLB.TV', label:'MLB.TV', bg:'#041E42', svc:'MLB.TV', dom:'mlb.com', mlbtv:true}];
     else if(L === 'nhl' && !teams.includes('CAR')) usable = [{label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, guess:true}];
-    else if(L === 'wvb') usable = [{label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', guess:true}];
+    else if(L === 'wvb'){
+      // On the televised schedule? Use the real channel. Otherwise it's B1G+ streaming.
+      const net = wvbChannel(WVB_TV[dayKey(g.start)]);
+      usable = net ? [net]
+        : [{label:'BTN+', bg:'#0088ce', svc:'BTN+', dom:'bigtenplus.com', alt2:'bigten.org', guess:true}];
+    }
     else if(L === 'chky') usable = [{label:'ESPN+', bg:'#c8102e', svc:'ESPN+', img:ESPN_PLUS, guess:true}];
     else if(L === 'wbc') usable = [{label:'Netflix', bg:'#e50914', svc:'Netflix', guess:true, dom:'netflix.com'}];
     else if(g.league.tennis && found.length === 0) usable = [{label:'Tennis Ch', ch:217, bg:'#2e7d32', guess:true, dom:'tennischannel.com'}];
@@ -1225,7 +1250,8 @@ function statusHTML(g){
 
 function markHTML(p){
   const title = p.label + (p.ch ? ` · DTV ${p.ch}` : '') + (p.blackout ? ' · blackout, VPN via ESPN' : '')
-    + (p.faded ? ' · not the local window here' : '') + (p.st ? ' · out-of-market, stream it' : '');
+    + (p.faded ? ' · not the local window here' : '') + (p.st ? ' · out-of-market, stream it' : '')
+    + (p.guess ? ' · best guess, not in the listing' : '');
   const pill = `<span class="pill" style="background:${esc(p.bg||'#333')};${p.dark?'color:#111':''}">${esc(p.label)}</span>`;
   const same = (p.raw || '').replace(/[^a-z0-9]/gi,'').toLowerCase() === (p.label || '').replace(/[^a-z0-9]/gi,'').toLowerCase();
   // The official wordmark, once seen for this network, is used for every one of its
@@ -1236,7 +1262,7 @@ function markHTML(p){
   const img = src
     ? `<img class="netlogo" src="${esc(src)}" alt="${esc(p.label)}" loading="lazy" data-alt="${esc(alt)}" data-chip="${esc(pill)}">`
     : pill;
-  return `<span class="mk${p.blackout || p.faded ? ' out' : ''}" title="${esc(title + (p.raw && p.raw !== p.label ? ` (feed: ${p.raw})` : ''))}">${img}</span>`;
+  return `<span class="mk${p.blackout || p.faded ? ' out' : ''}${p.guess ? ' guess' : ''}" title="${esc(title + (p.raw && p.raw !== p.label ? ` (feed: ${p.raw})` : ''))}">${img}</span>`;
 }
 function chanHTML(g){
   const w = g.watch;
