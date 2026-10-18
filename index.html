@@ -95,6 +95,7 @@ main{max-width:1280px;margin:0 auto;padding:12px 16px 40px}
 .time{grid-area:time;font-size:13px}
 .time .st{display:block;font-weight:bold}
 .time .st.live{color:#c62828}
+.time .rnd{display:block;font-size:11px;font-weight:600;color:#7a1f1f;letter-spacing:.2px}
 .team{display:flex;align-items:center;gap:7px;min-width:0}
 .team .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tline .rk{font-size:11px;font-weight:600;color:var(--muted);margin-right:4px;vertical-align:1px}
@@ -631,6 +632,9 @@ function normalizeComp(L, ev, c){
     round: c.round?.displayName || c.type?.text || '',
     notes: (c.notes||[]).map(n => n.headline).filter(Boolean).join(' '),
     seasonType: ev.season?.type,
+    series: c.series ? {summary: c.series.summary || '',
+      total: c.series.totalCompetitions || 0,
+      wins: (c.series.competitors || []).map(x => x.wins ?? 0)} : null,
     postseason: (ev.season?.type === 3) || /playoff|bowl|championship|final/i.test((c.notes||[]).map(n=>n.headline).join(' ')),
     broadcasts: broadcastNames(c, ev),
     odds: parseOdds(c),
@@ -934,7 +938,22 @@ function scoreGame(g){
     const local = [g.home.abbr, g.away.abbr].filter(a => LOCAL_COLLEGE.includes(a));
     if(local.length){ r += 4; why.push(`${local.join('/')} nearby +4`); }
   }
-  if(g.postseason){ r += 12; why.push('postseason +12'); }
+  const round = roundOf(g);
+  if(round || g.postseason){
+    g.roundLabel = seriesLabel(g);
+    const floor = round ? round.floor : 76;
+    if(r < floor){ r = floor; why.push(`${round ? round.label : 'postseason'} floor ${floor}`); }
+    else { r += 6; why.push('postseason +6'); }
+
+    // Elimination games and deciders are the whole reason to watch.
+    const sr = g.series;
+    if(sr && sr.total && sr.wins.length === 2){
+      const need = Math.ceil(sr.total / 2);
+      const top = Math.max(...sr.wins);
+      if(sr.wins.every(w => w === need - 1)){ r += 5; why.push('winner-take-all +5'); }
+      else if(top === need - 1){ r += 3; why.push('elimination game +3'); }
+    }
+  }
   // Exhibition games don't count in the standings and shouldn't crowd the board.
   if(g.seasonType === 1 || /preseason|exhibition/i.test(g.notes || '')){
     g.preseason = true; r -= 26; why.push('preseason −26');
@@ -950,7 +969,7 @@ function scoreGame(g){
   }
 
   // MLB: a pennant race beats a good matchup between eliminated teams
-  if(L.key === 'mlb' && isStretchRun()){
+  if(L.key === 'mlb' && isStretchRun() && !g.postseason && !round){
     const st = [g.away.abbr, g.home.abbr].map(a => state.mlbRace?.[a] || 'unknown');
     const live = st.filter(x => x === 'in' || x === 'chasing').length;
     if(live === 2){ r += 18; why.push('both in the race +18'); }
@@ -1027,7 +1046,7 @@ function scoreGame(g){
     r += 5; why.push('live +5');
     // The drama bonuses overlap by design; without a ceiling a tense midweek game
     // crowds out a favorite. 88 keeps it below the Brewers and Packers floors.
-    if(!hasFav(g) && r > 88){ r = 88; why.push('capped at 88'); }
+    if(!hasFav(g) && !g.postseason && !round && r > 88){ r = 88; why.push('capped at 88'); }
   }
   if(g.state === 'post'){ r -= 8; why.push('final −8'); }
 
@@ -1044,12 +1063,17 @@ function scoreGame(g){
     if(s.fav.bonus){ r += s.fav.bonus; why.push(`${s.abbr} ${s.fav.mark} +${s.fav.bonus}`); }
     // A favorite's floor is for games that count; in preseason they get a nudge only.
     if(g.preseason){ r += 8; why.push(`${s.abbr} ${s.fav.mark} preseason +8`); }
+    else if(g.postseason){ r += 5; why.push(`${s.abbr} ${s.fav.mark} in the playoffs +5`); }
     else if(s.fav.min && r < s.fav.min){ r = s.fav.min; why.push(`${s.abbr} ${s.fav.mark} floor ${s.fav.min}`); }
   }
   return finish(g, r, why);
 }
 function finish(g, r, why){
-  if(!g.watch.ok && !hasFav(g) && !g.cup){ r -= 15; why.push('not in your lineup −15'); }
+  // Rounds stay in order: a tense division-series game can't outrank a championship
+  // one just by piling up drama bonuses.
+  const rd = roundOf(g);
+  if(rd && r > rd.cap){ r = rd.cap; why.push(`${rd.label} ceiling ${rd.cap}`); }
+  if(!g.watch.ok && !hasFav(g) && !g.cup && !g.postseason){ r -= 15; why.push('not in your lineup −15'); }
   g.rating = Math.max(1, Math.min(99, Math.round(r)));
   g.why = why.join(' · ');
 }
@@ -1058,6 +1082,38 @@ function clockSeconds(clock){
   const m = /^(\d+):(\d{2})$/.exec(String(clock || '').trim());
   return m ? (+m[1]) * 60 + (+m[2]) : null;
 }
+// How deep into October (or January, or March) a game is. The floor is what the
+// game is worth before anything else — a league championship game outranks any
+// regular-season matchup on the board, favorite or not.
+const ROUNDS = [
+  {re:/world series|super bowl|stanley cup final(?!s? ?conference)|national championship game/i, floor:96, cap:100, label:'the final'},
+  {re:/(league|conference) championship series|conference championship|conference final|final four|championship round/i, floor:91, cap:97, label:'championship round'},
+  {re:/division series|divisional (round|playoff)|elite eight|conference semifinal|second round/i, floor:85, cap:93, label:'division round'},
+  {re:/wild ?card|first round|opening round|round of (16|32|64)/i, floor:79, cap:88, label:'opening round'},
+];
+function roundOf(g){
+  const t = `${g.notes || ''} ${g.round || ''} ${g.tournament || ''} ${g.detail || ''}`;
+  return ROUNDS.find(x => x.re.test(t)) || null;
+}
+
+// Short tag for the row: "ALCS G3", "World Series G1", "NLDS G5".
+function seriesLabel(g){
+  const t = `${g.notes || ''} ${g.round || ''}`;
+  const gm = /game (\d+)/i.exec(t);
+  const map = [
+    [/world series/i, 'World Series'], [/american league championship/i, 'ALCS'],
+    [/national league championship/i, 'NLCS'], [/american league division/i, 'ALDS'],
+    [/national league division/i, 'NLDS'], [/american league wild ?card/i, 'AL Wild Card'],
+    [/national league wild ?card/i, 'NL Wild Card'], [/super bowl/i, 'Super Bowl'],
+    [/stanley cup final/i, 'Cup Final'], [/conference final/i, 'Conference Final'],
+    [/conference championship/i, 'Conf Championship'], [/divisional/i, 'Divisional'],
+    [/wild ?card/i, 'Wild Card'], [/final four/i, 'Final Four'],
+  ];
+  const hit = map.find(([re]) => re.test(t));
+  const base = hit ? hit[1] : (g.postseason ? 'Playoffs' : '');
+  return base ? base + (gm ? ` G${gm[1]}` : '') : '';
+}
+
 function hasFav(g){ return !!(g.home?.fav || g.away?.fav); }
 function isLate(g){
   const k = g.league.key, p = g.period;
@@ -1133,9 +1189,10 @@ function statusHTML(g){
   const t = fmtTime.format(g.start);
   const today = dayKey(new Date()) === dayKey(g.start);
   const when = today ? t : `${fmtDay.format(g.start)} ${t}`;
-  if(g.state === 'in') return `<span class="st live">${esc(g.detail || 'Live')}</span>`;
-  if(g.state === 'post') return `<span class="st">${esc(g.detail || 'Final')}</span><span>${esc(when)}</span>`;
-  return `<span class="st">${esc(when)}</span>${/postpon|delay|cancel/i.test(g.detail) ? `<span>${esc(g.detail)}</span>` : ''}`;
+  const rnd = g.roundLabel ? `<span class="rnd">${esc(g.roundLabel)}</span>` : '';
+  if(g.state === 'in') return `<span class="st live">${esc(g.detail || 'Live')}</span>${rnd}`;
+  if(g.state === 'post') return `<span class="st">${esc(g.detail || 'Final')}</span>${rnd || `<span>${esc(when)}</span>`}`;
+  return `<span class="st">${esc(when)}</span>${rnd}${/postpon|delay|cancel/i.test(g.detail) ? `<span>${esc(g.detail)}</span>` : ''}`;
 }
 
 function markHTML(p){
