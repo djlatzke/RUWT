@@ -243,6 +243,8 @@ dialog .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
   <div class="hint" id="feedStatus">—</div>
   <label>NFL local coverage</label>
   <div class="hint" id="nflStatus">—</div>
+  <label>NBA coverage</label>
+  <div class="hint" id="nbaStatus">—</div>
   <label>Channel names ESPN sent</label>
   <div class="hint" id="chanStatus">—</div>
   <div class="hint" style="margin-top:12px">Braves, Reds, Nationals and Orioles games are treated as blacked out on MLB.TV and flagged instead.</div>
@@ -274,6 +276,9 @@ const FAVORITES = {
   ncaab: { WIS: {min:80, mark:'⭐'}, ILL: {bonus:12, mark:'✨'} },
   ncaaf: { WIS: {min:80, mark:'⭐'}, ILL: {bonus:12, mark:'✨'} },
   chky:  { WIS: {min:78, mark:'⭐'} },
+  // Bucks get a star, but the floor sits below the NHL favorites on purpose —
+  // basketball is a lower priority than hockey here.
+  nba:   { MIL: {min:74, mark:'⭐'} },
   wvb:   { WIS: {min:78, mark:'⭐'} },
 };
 
@@ -349,7 +354,7 @@ const LEAGUES = [
   {key:'nhl',   label:'NHL',    path:'hockey/nhl',                        color:'#3a3d42', base:48, months:[9,6]},
   {key:'chky',  label:'CHKY',   path:'hockey/mens-college-hockey',        color:'#1d3557', base:42, college:true, months:[10,4]},
   {key:'ncaab', label:'CBB',    path:'basketball/mens-college-basketball',color:'#c45a10', base:40, college:true, qs:'groups=50', months:[11,4]},
-  {key:'nba',   label:'NBA',    path:'basketball/nba',                    color:'#1d428a', base:34, watchableOnly:true, months:[10,6]},
+  {key:'nba',   label:'NBA',    path:'basketball/nba',                    color:'#1d428a', base:26, watchableOnly:true, months:[10,6]},
   {key:'wvb',   label:'VB',     path:'volleyball/womens-college-volleyball', color:'#c5050c', base:50, months:[8,12]},
   {key:'golf',  label:'PGA',    path:'golf/pga',                          color:'#7ec87a', base:55, event:true, darkText:true},
   {key:'eur',   label:'DPWT',   path:'golf/eur',                          color:'#0b5394', base:46, event:true},
@@ -412,6 +417,8 @@ const SOURCES = [
   [/mlb ?net(work)?|^mlbn$/i, {caption:'MLB Net', label:'MLB Network', ch:213, bg:'#041E42', dom:'mlb.com'}],
   [/nfl ?net/i,              {label:'NFLN', ch:212, bg:'#013369', dom:'nfl.com'}],
   [/nba ?tv/i,               {label:'NBA TV', ch:216, bg:'#1d428a', dom:'nba.com'}],
+  [/league ?pass|nba ?lp/i,  {label:'League Pass', bg:'#1d428a', dom:'nba.com', notMine:true}],
+  [/^nbcsn$|nbc sports network/i, {label:'Peacock', bg:'#000', svc:'Peacock', dom:'peacocktv.com'}],
   [/^tbs$/i,                 {label:'TBS', ch:247, bg:'#222', also:'HBO Max', dom:'tbs.com'}],
   [/^tnt|tnt sports/i,       {label:'TNT', ch:245, bg:'#222', also:'HBO Max', dom:'tntdrama.com'}],
   [/trutv/i,                 {label:'truTV', ch:246, bg:'#222', also:'HBO Max', dom:'trutv.com'}],
@@ -1329,7 +1336,9 @@ function visibleGames(){
   const f = state.filters, now = new Date();
   const tKey = dayKey(now);
   return state.games.filter(g => {
-    if(g.league.watchableOnly && !g.watch.ok) return false;
+    // NBA is filtered to what Dan can actually watch — no League Pass — but a
+    // Bucks game always shows, carried or not.
+    if(g.league.watchableOnly && !g.watch.ok && !hasFav(g)) return false;
     if(g.league.tennis && !tennisRelevant(g)) return false;
     if(g.league.key === 'wvb' && !hasFav(g)) return false;   // Wisconsin matches only
     if(g.league.college && !collegeRelevant(g)) return false;
@@ -1466,6 +1475,11 @@ $('#settingsBtn').onclick = () => {
     ? `${nfl.length} NFL games on ${days.join(', ')} · ${hit} matched the Charlotte list · ` +
       `${Object.keys(state.localFix).length} tapped fixes`
     : 'No NFL games loaded.';
+  const nba = state.games.filter(x => x.league.key === 'nba');
+  const nbaOk = nba.filter(x => x.watch.ok).length;
+  $('#nbaStatus').textContent = nba.length
+    ? `${nba.length} NBA games loaded · ${nbaOk} on your services · ${nba.length - nbaOk} hidden (League Pass or regional)`
+    : 'No NBA games loaded.';
   const un = Object.entries(state.unmatched).sort((a,b) => b[1] - a[1]).slice(0,14);
   const kn = Object.keys(state.seenNames).length;
   $('#chanStatus').innerHTML = `${kn} distinct names seen. ` +
